@@ -14,3 +14,6 @@ Specifically, our project is divided up into 3 components:
 
 Related fields: natural language processing, sentiment analysis, abstractive summarization, deep learning, natural language generation
 
+## Getting Started
+1. `pip install -r requirements.txt`
+2. `python -m spacy download en_core_web_lg`
