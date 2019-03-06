@@ -6,6 +6,7 @@
 from src.contractions import CONTRACTIONS
 import dask.dataframe as dd
 from dask.multiprocessing import get
+import gensim
 from multiprocessing import cpu_count
 import pandas as pd
 import re
@@ -19,15 +20,16 @@ CONTRACTION_REGEX = re.compile('({})'.format('|'.join(CONTRACTIONS.keys())),
                                       flags=re.IGNORECASE|re.DOTALL)
 CORE_COUNT = cpu_count()
 
-nlp = spacy.load('en_core_web_lg') # TODO: Disable components if nec.
+nlp = spacy.load('en_core_web_sm') # TODO: Disable components if nec.
 
-# ======== MAIN FUNCTIONS ========
+# ======== CLEANING TEXT ========
 
 # Retain Numbers, Upper Case, Punctuation, Stop-Words
 # No Stemming, Lemmatization
 def clean_data(reviews):
     """ Returns (OOV, cleaned reviews) 
         where OOV : {<text> : [<row_idx>, ...], ...}"""
+        
     ddask_reviewText = dd.from_pandas(reviews.reviewText, npartitions = CORE_COUNT)
     # substitute accents
     ddask_reviewText = dd.from_pandas(ddask_reviewText.map_partitions(lambda df : df.apply(lambda row : remove_accents(row))).compute(), 
@@ -62,7 +64,6 @@ def clean_data(reviews):
 
     return OOV_words, reviews
 
-# ======== HELPER FUNCTIONS ========
 def remove_accents(text):
     return unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8', 'ignore')
 
@@ -90,5 +91,3 @@ def standardize_date(exist_date):
         exist_date[i] = date_comp
 
     return "{0} {1} {2}".format(exist_date[1], exist_date[0], exist_date[2].strip(", "))
-
-
