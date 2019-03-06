@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import gzip
 from sklearn.mixture import GaussianMixture
+from sklearn.mixture import BayesianGaussianMixture
 from sklearn.metrics.pairwise import cosine_similarity
 
 def parse(path):
@@ -61,16 +62,26 @@ message_embeddings
 """### Cluster"""
 
 gmm = GaussianMixture(n_components=5, covariance_type='full').fit(message_embeddings)
+bgmm = BayesianGaussianMixture(n_components=5, covariance_type='full').fit(message_embeddings)
 
-gmm.means_
+print(gmm.means_)
+print("\n")
+print(bgmm.means_)
 
 """### Extract"""
 
-sim = cosine_similarity(message_embeddings, gmm.means_)
+sim1 = cosine_similarity(message_embeddings, gmm.means_)
+sim2 = cosine_similarity(message_embeddings, bgmm.means_)
 
-extractive_means = sim.argmax(axis=0)
+extractive_means1 = sim1.argmax(axis=0)
+extractive_means2 = sim2.argmax(axis=0)
 
-for i in extractive_means:
+for i in extractive_means1:
+  print(text[i] + '\n')
+  
+print("##########")
+  
+for i in extractive_means2:
   print(text[i] + '\n')
 
 """## Sentence Level"""
@@ -95,10 +106,20 @@ with tf.Session() as session:
   session.run([tf.global_variables_initializer(), tf.tables_initializer()])
   review_sentence_embeddings = session.run(embed(sentences))
 
-gmm = GaussianMixture(n_components=10, covariance_type='full').fit(review_sentence_embeddings)
+gmm_sentence = GaussianMixture(n_components=10, covariance_type='full').fit(review_sentence_embeddings)
+bgmm_sentence = BayesianGaussianMixture(n_components=10, covariance_type='full').fit(review_sentence_embeddings)
 
-sim = cosine_similarity(review_sentence_embeddings, gmm.means_)
-extractive_means = sim.argmax(axis=0)
+sim1 = cosine_similarity(review_sentence_embeddings, gmm_sentence.means_)
+extractive_means1 = sim1.argmax(axis=0)
 
-for i in extractive_means:
+sim2 = cosine_similarity(review_sentence_embeddings, bgmm_sentence.means_)
+extractive_means2 = sim2.argmax(axis=0)
+
+for i in extractive_means1:
   print(sentences[i] + '\n')
+
+print('###########')
+  
+for i in extractive_means2:
+  print(sentences[i] + '\n')
+
