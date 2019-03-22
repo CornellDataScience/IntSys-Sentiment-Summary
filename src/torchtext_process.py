@@ -13,7 +13,7 @@ from torchtext import data, datasets
 SOS = 'SOS'
 EOS = 'EOS'
 
-FIELDS_ROOT_PATH = os.path.join("data", "fields")
+FIELDS_ROOT_PATH = os.path.join("data")
 SRC_FIELD_PATHS = ("src", os.path.join(FIELDS_ROOT_PATH, "src"))
 TGT_FIELD_PATHS = ("src", os.path.join(FIELDS_ROOT_PATH, "src"))
 
@@ -53,13 +53,13 @@ def load_torchtext_datasets(data_path, rel_train, rel_val, rel_test):
     if not os.path.exists(SRC_FIELD_PATHS[1]):
         SRC.build_vocab(train) #TODO: Add vectors? How do we ensure that made-up-tokens are there?
 
-        with open(SRC_FIELD_PATHS[1], 'wb') as dill_file:
+        with open(SRC_FIELD_PATHS[1], 'wb+') as dill_file:
             dill.dump(SRC, dill_file)
 
     if not os.path.exists(TGT_FIELD_PATHS[1]):
         TGT.build_vocab(train) #TODO: Add vectors? How do we ensure that made-up-tokens are there?
 
-        with open(TGT_FIELD_PATHS[1], 'wb') as dill_file:
+        with open(TGT_FIELD_PATHS[1], 'wb+') as dill_file:
             dill.dump(TGT, dill_file)
 
     return (train, val, test), (SRC, TGT)
