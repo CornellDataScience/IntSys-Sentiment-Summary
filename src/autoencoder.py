@@ -7,14 +7,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 t_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+def initialize_shared_embeddings(weight_matrix, freeze = True):
+    shared_embedding = nn.Embedding.from_pretrained(weight_matrix)
+    shared_embedding.weight.requires_grad = not freeze
+    shared_embedding.to(device = t_device)
+
+    return shared_embedding
 
 class Encoder(nn.Module):
 
-    def __init__(self, vocab_size, input_size, hidden_size):
+    def __init__(self, vocab_size, input_size, hidden_size, embedding_layer):
         super(Encoder, self).__init__()
         self.hidden_size = hidden_size
 
-        self.embedding = nn.Embedding(vocab_size, input_size)
+        self.embedding = embedding_layer
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers = 1)
 
     def forward(self, input, hidden):
@@ -27,16 +35,16 @@ class Encoder(nn.Module):
         return (torch.zeros(1, batch_size, self.hidden_size, device = t_device)), (torch.zeros(1, batch_size, self.hidden_size, device = t_device))
 
     def initialize_embeddings(self, weight_matrix, freeze = True):
-        self.embedding = nn.Embedding.from_embedding(weight_matrix)
+        self.embedding = nn.Embedding.from_pretrained(weight_matrix)
         self.embedding.weight.requires_grad = not freeze
 
 class Decoder(nn.Module):
 
-    def __init__(self, vocab_size, output_size, hidden_size):
+    def __init__(self, vocab_size, output_size, hidden_size, embedding_layer):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
 
-        self.embedding = nn.Embedding(vocab_size, output_size)
+        self.embedding = embedding_layer
         self.lstm = nn.LSTM(output_size, hidden_size, num_layers = 1)
         # input_size = ouput_size because we're using the prev. output as input
         self.lstm_out = nn.Linear(hidden_size, output_size)

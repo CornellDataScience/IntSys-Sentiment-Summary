@@ -21,7 +21,11 @@ SRC_FIELD_PATHS = ("src", os.path.join(FIELDS_ROOT_PATH, "src"))
 TGT_FIELD_PATHS = ("tgt", os.path.join(FIELDS_ROOT_PATH, "tgt"))
 
 def whitespace_tokenizer(text):
-    return text.split(" ")
+    text = text.strip().split(" ")
+    if text[-1] == ".":
+        return text[:-1]
+    else:
+        return text
 
 # TODO : Pass Vector Model
 def load_torchtext_datasets(data_path, rel_train, rel_val, rel_test):

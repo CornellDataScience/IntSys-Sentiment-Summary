@@ -20,7 +20,7 @@ CONTRACTION_REGEX = re.compile('({})'.format('|'.join(CONTRACTIONS.keys())),
                                       flags=re.IGNORECASE|re.DOTALL)
 CORE_COUNT = cpu_count()
 
-nlp = spacy.load('en_core_web_sm') # TODO: Disable components if nec.
+nlp = spacy.load('en_core_web_lg') # TODO: Disable components if nec.
 
 # ======== CLEANING TEXT ========
 
