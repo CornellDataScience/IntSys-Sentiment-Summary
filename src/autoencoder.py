@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import lang
+
 t_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
@@ -32,11 +34,8 @@ class Encoder(nn.Module):
         return output, hidden
 
     def init_hidden(self, batch_size):
-        return (torch.zeros(1, batch_size, self.hidden_size, device = t_device)), (torch.zeros(1, batch_size, self.hidden_size, device = t_device))
-
-    def initialize_embeddings(self, weight_matrix, freeze = True):
-        self.embedding = nn.Embedding.from_pretrained(weight_matrix)
-        self.embedding.weight.requires_grad = not freeze
+        return (torch.zeros(1, batch_size, self.hidden_size, device = t_device)), 
+               (torch.zeros(1, batch_size, self.hidden_size, device = t_device))
 
 class Decoder(nn.Module):
 
@@ -61,9 +60,34 @@ class Decoder(nn.Module):
         output = self.softmax(self.lstm_out(output))
         return output, hidden
 
-    def initialize_embeddings(self, weight_matrix, freeze = True):
-        self.embedding = nn.Embedding.from_embedding(weight_matrix)
-        self.embedding.weight.requires_grad = not freeze
+def AutoEncoder(nn.Module):
+
+    def __init__(self, encoder, decoder):
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def forward(self, input, use_teacher_forcing):
+        input_batch_size = input.shape[1]
+        encoder_hidden = self.encoder.init_hidden(batch_size = input_batch_size)
+
+        encoder_output, encoder_hidden = self.encoder(input, encoder_hidden)
+
+        max_target_length = target.shape[0]
+
+        decoder_input = torch.tensor([[lang.C_SOS_IDX] * input_batch_size], device=t_device)
+        decoder_hidden = encoder_hidden #take final h, c of encoder as input
+        outputs = torch.zeros(*input.shape, device=t_device)
+
+        for i in range(max_target_length):
+            decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+            decoder_top1 = decoder_output.topk(1, dim = 2)[1][0, :, 0]
+            outputs[i] = decoder_top1
+
+            decoder_input = target[i : i + 1] if use_teacher_forcing else decoder_top1.detach().view(1, -1)
+
+        return encoder_hidden, outputs
+
+
 
 # Questions:
 # 1. Do we use batch size in our specifications?
