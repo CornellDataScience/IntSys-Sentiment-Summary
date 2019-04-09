@@ -5,3 +5,5 @@ spacy==2.0.18
 pandas==0.24.1
 unicodedata2==11.0.0
 dask==1.1.1
+rouge==0.3.1
+py-rouge==1.1

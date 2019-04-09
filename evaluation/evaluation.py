@@ -1,4 +1,17 @@
-#TODO: write usage
+'''
+Module for evaluating rouge similarities between list of 
+hypothesis entries (what the machine produced) and list of 
+reference entries (gold standard).
+
+Computes rouge-n (up to n=4), rouge-l, and rouge-w
+(precision, recall, f-measure) 
+
+Usage: 
+import evaluation as ev
+ev.evaluate(<hypothesis list>, <reference list>) 
+#both params are string lists
+'''
+
 import rouge
 
 def get_scores(hyp_list, ref_list):
@@ -11,13 +24,13 @@ def get_scores(hyp_list, ref_list):
     assert len(hyp_list) == len(ref_list)
 
     evaluator = rouge.Rouge(metrics=['rouge-n', 'rouge-l', 'rouge-w'],
-                           max_n=4,
+                           max_n=4, #stuff is hardcoded off of this, can change later
                            limit_length=True,
                            length_limit=100,
                            length_limit_type='words',
                            apply_avg=True,
                            apply_best=True,
-                           alpha=0.5, # Default F1_score
+                           alpha=0.5, #default f1_score, TODO: modify
                            weight_factor=1.2,
                            stemming=True)
 
@@ -68,7 +81,10 @@ def get_avg(nums):
 
 
 def evaluate(hyp_list, ref_list):
-    #TODO: write docstring
+    '''
+    produce aggregate evaluation of hyp_list and ref_list
+    and print to terminal
+    '''
     print("outputting f, p, r for each rouge metric...")
 
     scores = get_scores(hyp_list, ref_list)
@@ -110,20 +126,20 @@ def evaluate(hyp_list, ref_list):
                                     get_avg(extract_fpr(rws, 'r'))))
 
 
+if __name__ == "__main__" :
+    # scores = get_scores(["the cat ate the rat", "hello hi world"], ["the fat cat ate the rat", "hello world"])
+    # print(scores)
+    # print(type(scores[0]))
 
-###test###
-# scores = get_scores(["the cat ate the rat", "hello hi world"], ["the fat cat ate the rat", "hello world"])
-# print(scores)
-# print(type(scores[0]))
+    # rouge_1s = extract_rtype(scores, 'rouge-1')
+    # print(rouge_1s)
 
-# rouge_1s = extract_rtype(scores, 'rouge-1')
-# print(rouge_1s)
+    # recalls = extract_fpr(rouge_1s, 'r')
+    # print(recalls)
 
-# recalls = extract_fpr(rouge_1s, 'r')
-# print(recalls)
-
-# avg_recalls = get_avg(recalls)
-# print(avg_recalls)
+    # avg_recalls = get_avg(recalls)
+    # print(avg_recalls)
 
 
-evaluate(["the cat ate the rat", "hello hi world"], ["the fat cat ate the rat", "hello world"])
+    evaluate(["the cat ate the rat", "hello hi world"], 
+            ["the fat cat ate the rat", "hello world"])
