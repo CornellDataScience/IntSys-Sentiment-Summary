@@ -150,8 +150,9 @@ def finetune(data_path, output_path, save_name, batch_size, n_epochs, learning_r
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
+    batch_size = batch_size // gradient_accumulation_steps
     train_examples = load_data('data/sports_helpfulness.csv')
-    num_train_optimization_steps = int(len(train_examples) / batch_size) * n_epochs
+    num_train_optimization_steps = int(len(train_examples) / batch_size / gradient_accumulation_steps) * n_epochs
 
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=1)
     model.to(device)
@@ -199,12 +200,20 @@ def finetune(data_path, output_path, save_name, batch_size, n_epochs, learning_r
             logits = model(input_ids, segment_ids, input_mask, labels=None)
                 
             loss = loss_fct(logits.view(-1), label_ids.view(-1))
-
-            loss.backward()
+            if gradient_accumulation_steps > 1:
+                loss = loss / gradient_accumulation_steps
+            else:
+                loss.backward()
 
             tr_loss += loss.item()
             nb_tr_examples += input_ids.size(0)
             nb_tr_steps += 1
+            if (step + 1) % gradient_accumulation_steps == 0:
+                print(loss)
+                optimizer.step()
+                optimizer.zero_grad()
+                global_step += 1
+        print('Training Loss Epoch', str(e), ':', str(tr_loss/nb_tr_examples))
         
         model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
         model_name = save_name + str(e) + '.pt'
@@ -221,10 +230,10 @@ output_path = 'models/'
 save_name = 'finetune_sports'
 data_path = 'data/sports_helpfulness.csv'
 
-batch_size = 2
+batch_size = 32
 n_epochs = 2
 learning_rate = 5e-5
 warmup_proportion = .1
-gradient_accumulation_steps = 1
+gradient_accumulation_steps = 32
 
 finetune(data_path, output_path, save_name, batch_size, n_epochs, learning_rate, warmup_proportion, gradient_accumulation_steps)
