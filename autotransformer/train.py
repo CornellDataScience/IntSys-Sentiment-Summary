@@ -5,6 +5,7 @@ import spacy
 import torch
 import torch.nn as nn
 from torchtext import data, datasets
+from torchtext.vocab import Vectors
 
 from transformer.flow import make_model, batch_size_fn, run_epoch
 from transformer.greedy import greedy_decode
@@ -24,8 +25,9 @@ def get_dataset(train_path, val_path, MIN_FREQ):
     BOS_WORD = '<s>'
     EOS_WORD = '</s>'
     BLANK_WORD = '<blank>'
-    SRC = data.Field(tokenize=tokenize_en, pad_token=BLANK_WORD)
-    TGT = data.Field(tokenize=tokenize_en, init_token=BOS_WORD,
+    CLS_WORD = '<cls>'
+    SRC = data.Field(tokenize=tokenize_en, lower=True, init_token=CLS_WORD, pad_token=BLANK_WORD)
+    TGT = data.Field(tokenize=tokenize_en, lower=True, init_token=BOS_WORD,
                     eos_token=EOS_WORD, pad_token=BLANK_WORD)
 
 
@@ -34,8 +36,10 @@ def get_dataset(train_path, val_path, MIN_FREQ):
     train = data.TabularDataset(format='csv', path= train_path, fields=data_fields)
     val = data.TabularDataset(format='csv', path= val_path, fields=data_fields)
 
-    SRC.build_vocab(train.src, min_freq=MIN_FREQ)
-    TGT.build_vocab(train.trg, min_freq=MIN_FREQ)
+    VECTOR_MODEL = Vectors(name='glove.6B.300d.txt')
+
+    SRC.build_vocab(train.src, min_freq=MIN_FREQ, max_size=25000, vectors=VECTOR_MODEL)
+    TGT.build_vocab(train.trg, min_freq=MIN_FREQ, max_size=25000, vectors=VECTOR_MODEL)
     pad_idx = TGT.vocab.stoi[BLANK_WORD]
     return train, val, TGT, SRC, pad_idx, EOS_WORD, BOS_WORD, BLANK_WORD
 
@@ -62,8 +66,8 @@ def train(
     model.cuda()
     criterion = LabelSmoothing(size=len(TGT.vocab), padding_idx=pad_idx, smoothing=0.1)
     criterion.cuda()
-    BATCH_SIZE = 600  # Was 12000, but I only have 12 GB RAM on my single GPU.
-    train_iter = MyIterator(train, batch_size=BATCH_SIZE, device=0, repeat=False,
+    BATCH_SIZE = 1024  # Was 12000, but I only have 12 GB RAM on my single GPU.
+    train_iter = MyIterator(train, batch_size=BATCH_SIZE, device=0, repeat=False, #Faster with device warning
                             sort_key=lambda x: (len(x.src), len(x.trg)), batch_size_fn=batch_size_fn, train=True)
     valid_iter = MyIterator(val, batch_size=BATCH_SIZE, device=0, repeat=False,
                             sort_key=lambda x: (len(x.src), len(x.trg)), batch_size_fn=batch_size_fn, train=False)
@@ -76,44 +80,44 @@ def train(
         run_epoch((rebatch(pad_idx, b) for b in train_iter), model_par,
                   MultiGPULossCompute(model.generator, criterion, devices=devices, opt=model_opt))
         save_name = save_path + '_epoch' + str(epoch) + '.pt'
-        torch.save(model.state_dict(), save_name)
-        model_par.eval()
-        loss = run_epoch((rebatch(pad_idx, b) for b in valid_iter), model_par,
-                         MultiGPULossCompute(model.generator, criterion, devices=devices, opt=None))
-        print(loss)
+        torch.save(model, save_name)
+        # model_par.eval()
+        # loss = run_epoch((rebatch(pad_idx, b) for b in valid_iter), model_par,
+        #                  MultiGPULossCompute(model.generator, criterion, devices=devices, opt=None))
+        # print(loss)
 
-    for i, batch in enumerate(valid_iter):
-        if i > max_val_outputs:
-            break
-        src = batch.src.transpose(0, 1)[:1].cuda()
-        src_mask = (src != SRC.vocab.stoi[BLANK_WORD]).unsqueeze(-2).cuda()
-        out = greedy_decode(model, src, src_mask, max_len=max_len, start_symbol=TGT.vocab.stoi[BOS_WORD])
-        print('Translation:', end='\t')
-        for i in range(1, out.size(1)):
-            sym = TGT.vocab.itos[out[0, i]]
-            if sym == EOS_WORD:
-                break
-            print(sym, end=' ')
-        print()
-        print('Target:', end='\t')
-        for j in range(batch.trg.size(0)):
-            sym = TGT.vocab.itos[batch.trg.data[j, 0]]
-            if sym == EOS_WORD:
-                break
-            print(sym, end=' ')
-        print()
+    # for i, batch in enumerate(valid_iter):
+    #     if i > max_val_outputs:
+    #         break
+    #     src = batch.src.transpose(0, 1)[:1].cuda()
+    #     src_mask = (src != SRC.vocab.stoi[BLANK_WORD]).unsqueeze(-2).cuda()
+    #     out = greedy_decode(model, src, src_mask, max_len=max_len, start_symbol=TGT.vocab.stoi[BOS_WORD])
+    #     print('Translation:', end='\t')
+    #     for i in range(1, out.size(1)):
+    #         sym = TGT.vocab.itos[out[0, i]]
+    #         if sym == EOS_WORD:
+    #             break
+    #         print(sym, end=' ')
+    #     print()
+    #     print('Target:', end='\t')
+    #     for j in range(batch.trg.size(0)):
+    #         sym = TGT.vocab.itos[batch.trg.data[j, 0]]
+    #         if sym == EOS_WORD:
+    #             break
+    #         print(sym, end=' ')
+    #     print()
 
 
 if __name__ == '__main__':
-    train_path = 'data/test_train.csv'
-    val_path = 'data/test_val.csv'
-    save_path = 'models/copy_transfomer'
-    n_layers = 6 #for encoder and decoder
-    model_dim = 512
-    feedforward_dim = 2048
-    n_heads = 8
+    train_path = 'data/music_train.csv'
+    val_path = 'data/test_train.csv'
+    save_path = 'models/cls_head_transfomer'
+    n_layers = 5 #for encoder and decoder
+    model_dim = 300
+    feedforward_dim = 1024
+    n_heads = 4
     dropout_rate = 0.1
-    n_epochs = 3
+    n_epochs = 4
     max_len = 60
     min_freq = 3
     max_val_outputs = 20
