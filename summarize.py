@@ -191,5 +191,5 @@ if __name__ == "__main__":
 
     evaluation = evaluate(summary, most_helpful, 'rouge-l')
     print("Evaluation of summary:")
-    print("Rouge scores: {} // Cosine similarity: {}".format(evaluation[0], evaluation[1]))
+    print("Rouge scores: {} // Cosine similarity: {}".format(evaluation[0], 0)) #TODO: replace 0 with evaluation[1]
 
