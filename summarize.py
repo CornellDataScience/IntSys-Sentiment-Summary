@@ -58,6 +58,7 @@ def process_reviews(df):
     return rs_flatten
 
 
+#TODO: optimize formula calculation?
 def most_helpful_ind(rev_hp):
     '''
     [helper method] returns index of the most helpful rating 
@@ -75,10 +76,10 @@ def most_helpful_ind(rev_hp):
         num_total = rev_hp[x][1]
         if num_total == 0: continue
 
-        ratio_rating = num_helpful / num_total #TODO: change?
-        occ_rating = num_total / max_occurence #TODO: change?
+        ratio_rating = num_helpful / num_total 
+        occ_rating = num_total / max_occurence 
         
-        overall_rating = (0.75*ratio_rating) + (0.25*occ_rating) #TODO: change?
+        overall_rating = (0.75*ratio_rating) + (0.25*occ_rating) 
         if overall_rating > max_hp: 
             max_hp = overall_rating
             max_ind = x
@@ -103,7 +104,7 @@ def most_helpful(df):
     return best_rev_txt 
 
 
-#TODO
+#TODO: implement
 def encode(sentences):
     '''
     param [sentences]: the list of all tokenized review sentences in corpus
@@ -111,17 +112,17 @@ def encode(sentences):
     raise NotImplementedError
     #return encodings
 
-#TODO
+#TODO: implement
 def cluster(encodings):
     raise NotImplementedError
     #return candidate_points
 
-#TODO
+#TODO: implement
 def decode(candidate_points):
     raise NotImplementedError
     #return candidate_sents
 
-#TODO
+#TODO: implement
 def optimize(candidate_sents):
     raise NotImplementedError
     #return solution
@@ -131,7 +132,7 @@ def summarize(sentences):
     '''
     param [sentences]: the list of all tokenized review sentences in corpus
     '''
-    return '' #TODO: delete this line when finished implementing above functions
+    return 'Not implemented' #TODO: delete this line when finished implementing above functions
 
     encodings = encode(sentences)
     candidate_points = cluster(encodings)
@@ -145,6 +146,9 @@ def evaluate(hypothesis, reference, r_type):
     return evaluation of hypothesis text (our output) compared to 
     reference text (gold standard)
 
+    rouge score in form of tuple (f-score, precision, recall)
+    cosine similarity in the form of float [0,1]
+
     param [hypothesis]: string of summary our model outputted
     param [reference]: string of gold standard summary 
     param [r_type]: string specifying type of rouge metric we want to use,
@@ -152,7 +156,9 @@ def evaluate(hypothesis, reference, r_type):
                 'rouge-3', 'rouge-4', 'rouge-l', 'rouge-w']
     '''
     rouge = ev.evaluate_rouge(hypothesis, reference, r_type)
-    cos_sim = ev.evaluate_embeddings(encode(hypothesis), encode(reference))
+    #TODO: make sure embedding dimensions are good
+    cos_sim = 0 #ev.evaluate_embeddings(encode(hypothesis), encode(reference))
+    #TODO: get rid of 0 when encode is done
 
     return rouge, cos_sim
 
@@ -165,12 +171,13 @@ def print_first_5(lst):
     long to print fully
     '''
     print_str = '['
-    for elt in lst:
-        print_str += repr(elt)
+    for x in range(4):
+        print_str += repr(lst[x])
         print_str += '; \n'
 
     print_str += '... ]'
-    return print_str
+    print(print_str)
+
 
 if __name__ == "__main__":
     reviews = sys.argv[1] #the review path
@@ -189,7 +196,7 @@ if __name__ == "__main__":
     print("Summary:")
     print(summary)
 
-    evaluation = evaluate(summary, most_helpful, 'rouge-l')
+    evaluation = evaluate(summary, most_helpful, 'rouge-l') #evaluation metrics
     print("Evaluation of summary:")
-    print("Rouge scores: {} // Cosine similarity: {}".format(evaluation[0], 0)) #TODO: replace 0 with evaluation[1]
+    print("Rouge scores: {} // Cosine similarity: {}".format(evaluation[0], evaluation[1]))
 
