@@ -91,7 +91,7 @@ def evaluate_rouge(hyp, ref):
         score = get_scores(hyp, ref)
         rouge = extract_rtype(score, r)
         fpr = (r, extract_fpr(rouge, 'f'), extract_fpr(rouge, 'p'), extract_fpr(rouge, 'r'))
-        print("type: {} f: {} p: {} r: {}".format(r, fpr[0], fpr[1], fpr[2]))
+        print("type: {} f: {} p: {} r: {}".format(fpr[0], fpr[1], fpr[2], fpr[3]))
         fpr_list.append(fpr)
 
     return fpr_list
