@@ -75,20 +75,26 @@ def get_avg(nums):
     return sum(nums)/len(nums)
 
 
-def evaluate_rouge(hyp, ref, r_type):
+def evaluate_rouge(hyp, ref):
     '''
     produce aggregate evaluation of hyp_list and ref_list
     and print to terminal
     '''
     print("outputting f, p, r for each rouge metric...")
 
-    score = get_scores(hyp, ref)
-    
-    r = extract_rtype(score, r_type)
-    fpr = (extract_fpr(r, 'f'), extract_fpr(r, 'p'), extract_fpr(r, 'r'))
-    print("f: {} p: {} r: {}".format(fpr[0], fpr[1], fpr[2]))
+    rouge_types = ['rouge-1','rouge-2', 
+                'rouge-3', 'rouge-4', 'rouge-l', 'rouge-w']
 
-    return fpr
+    fpr_list = []
+
+    for r in rouge_types:
+        score = get_scores(hyp, ref)
+        rouge = extract_rtype(score, r)
+        fpr = (r, extract_fpr(rouge, 'f'), extract_fpr(rouge, 'p'), extract_fpr(rouge, 'r'))
+        print("type: {} f: {} p: {} r: {}".format(r, fpr[0], fpr[1], fpr[2]))
+        fpr_list.append(fpr)
+
+    return fpr_list
 
     
 
@@ -112,4 +118,4 @@ if __name__ == "__main__" :
     # print(avg_recalls)
 
 
-    evaluate_rouge("the cat ate the rat", "the fat cat ate the rat", 'rouge-1')
+    evaluate_rouge("the cat ate the rat", "the fat cat ate the rat")

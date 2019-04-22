@@ -141,7 +141,7 @@ def summarize(sentences):
     return solution
 
 
-def evaluate(hypothesis, reference, r_type):
+def evaluate(hypothesis, reference):
     '''
     return evaluation of hypothesis text (our output) compared to 
     reference text (gold standard)
@@ -151,11 +151,8 @@ def evaluate(hypothesis, reference, r_type):
 
     param [hypothesis]: string of summary our model outputted
     param [reference]: string of gold standard summary 
-    param [r_type]: string specifying type of rouge metric we want to use,
-        must be one of the following: ['rouge-1','rouge-2', 
-                'rouge-3', 'rouge-4', 'rouge-l', 'rouge-w']
     '''
-    rouge = ev.evaluate_rouge(hypothesis, reference, r_type)
+    rouge = ev.evaluate_rouge(hypothesis, reference)
     #TODO: make sure embedding dimensions are good
     cos_sim = 0 #ev.evaluate_embeddings(encode(hypothesis), encode(reference))
     #TODO: get rid of 0 when encode is done
@@ -196,7 +193,7 @@ if __name__ == "__main__":
     print("Summary:")
     print(summary)
 
-    evaluation = evaluate(summary, most_helpful, 'rouge-l') #evaluation metrics
+    evaluation = evaluate(summary, most_helpful) #evaluation metrics
     print("Evaluation of summary:")
     print("Rouge scores: {} // Cosine similarity: {}".format(evaluation[0], evaluation[1]))
 
