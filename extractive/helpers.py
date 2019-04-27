@@ -13,17 +13,21 @@ def cut_out_shorts(list_of_sentences, features):
     return list_of_sentences,features
 
 def find_clusters(features):   
-    num_clusters = 0
+    
     eps = config["density_parameter"]
     min_clusters = config["min_clusters"]
     max_acceptable_clusters = config["max_acceptable_clusters"]
     minimum_samples = config["minimum_samples"]
+    
+    num_clusters = 0
     num_iterations = 0
     while num_clusters < min_clusters or num_clusters > max_acceptable_clusters:
         num_iterations += 1
         clusterer = DBSCAN(eps = eps, min_samples = minimum_samples, metric = "cosine")
         sentence_labels = clusterer.fit_predict(features)
-        num_clusters = len(set(sentence_labels))
+        
+        #subtract one since DBSCAN considers non-clustered sentences to be in one large cluster
+        num_clusters = len(set(sentence_labels)) - 1
         
         if num_clusters < config["min_clusters"]:
             minimum_samples = 3
@@ -63,4 +67,15 @@ def sample(list_of_sentences, sentence_labels, features, num_clusters):
             candidates.append(list_of_sentences[sentence_index])
             
     return candidates
-    
+
+
+def abstractive_cluster(features, sentence_labels):
+    means = []
+    for cluster in set(sentence_labels):
+        if cluster == -1:
+            continue
+        cluster_indices = np.where(sentence_labels == cluster)
+        cluster_core_samples = features[cluster_indices]
+        average = np.mean(cluster_core_samples, axis = 0)
+        means.append(average)
+    return means

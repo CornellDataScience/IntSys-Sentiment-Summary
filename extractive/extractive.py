@@ -1,8 +1,8 @@
 import indicoio
 import pickle
-from helpers import cut_out_shorts, find_clusters, sample
+from helpers import cut_out_shorts, find_clusters, sample, abstractive_cluster
 
-def encode(list_of_sentences, savePath = None):
+def extractive_encode(list_of_sentences, savePath = None):
     """Featurizes a list of sentences using the indico API"""
     print("Featuring " + str(len(list_of_sentences)) + 
           " sentences - remember to be careful with API credits!")
@@ -13,13 +13,13 @@ def encode(list_of_sentences, savePath = None):
         pickle.dump(sentencefeatures, open(savePath,"wb"))
     return sentencefeatures
 
-def decode(list_of_sentences, features = None):
+def extractive_decode(list_of_sentences, features = None):
     """Implements the 'encode' and 'decode' methods of the pipeline. density_parameter
         and minimum_samples are DBSCAN hyperparameters."""
     
     #featurize if needed
     if features is None:
-        features = encode(list_of_sentences)
+        features = extractive_encode(list_of_sentences)
     
     #cut out very short sentences
     list_of_sentences, features = cut_out_shorts(list_of_sentences, features) 
@@ -35,10 +35,21 @@ def decode(list_of_sentences, features = None):
     print("Number of clusters: " + str(num_clusters))
     print("Final density parameter: " + str(eps))
     return candidates
+
+
+def cluster(features):
+    """For abstractive clustering. Returns a mean of each cluster."""
+    
+    sentence_labels, _, _ = find_clusters(features)
+    return abstractive_cluster(features, sentence_labels)
     
 if __name__ == "__main__":
+    import numpy as np
     #using test data of most popular review from electronics
     text = pickle.load(open("popular_electronics_sentences.p","rb"))
     features = pickle.load(open("electronics_popular_features.p","rb"))
-    sentences = decode(text, features)
+    text, features = cut_out_shorts(text, features)
+    means = cluster(features)
+    print(np.shape(means))
+    sentences = extractive_decode(text, features)
     print(sentences)
