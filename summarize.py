@@ -105,12 +105,27 @@ def most_helpful(df):
 
 
 #TODO: implement
-def encode(sentences):
+def encode(sentence):
     '''
-    param [sentences]: the list of all tokenized review sentences in corpus
+    [encode sentence] returns a single encoding for a single 
+    sentence. this will be used as a mapping function for 
+    encode_sentences
+
+    param [sentence]: the single sentence to be encoded
     '''
     raise NotImplementedError
-    #return encodings
+    #return encoding
+
+
+def encode_sentences(sentences):
+    '''
+    [encode_sentences sentences] returns a list of encodings for each
+    sentence in sentences
+    
+    param [sentences]: the list of all tokenized review sentences in corpus
+    '''
+    return list(map(lambda s: encode(s), sentences))
+
 
 #TODO: implement
 def cluster(encodings):
@@ -134,7 +149,7 @@ def summarize(sentences):
     '''
     return 'Not implemented' #TODO: delete this line when finished implementing above functions
 
-    encodings = encode(sentences)
+    encodings = encode_sentences(sentences)
     candidate_points = cluster(encodings)
     candidate_sents = decode(candidate_points)
     solution = optimize(candidate_sents)
