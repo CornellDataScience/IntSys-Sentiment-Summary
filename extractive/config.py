@@ -1,5 +1,4 @@
-config = {"features": None,
-          "density_parameter": 0.04, 
+config = {"density_parameter": 0.04, 
           "minimum_samples": 4,
           "min_clusters": 5,
           "min_num_candidates": 75,
