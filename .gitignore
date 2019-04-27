@@ -12,3 +12,6 @@ __pycache__/
 # Data
 /data
 /.data
+
+# Config Files
+**/config.py
