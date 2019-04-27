@@ -1,65 +1,82 @@
 import numpy as np
 
-'''
-- fitness_func(X)[i] = the fitness of X[i]
-- selection_prob_func(fitness_func(X))[i,j] = probability X[i] and X[j] produce
-  offspring. Expected that all elements above the main diagonal are 0, and
-  that all elements sum to 1.
-  (Matrix representation allows numpy speedups)
-- crossover_func(X_1, X_2)[i] = a crossed-over child of X_1[i] and X_2[i] w/o mutations
-- mutation_func(X)[i] = a randomly mutated form of X[i]
-'''
-def optimize(X, fitness_func, selection_prob_func, n_elite, crossover_func, mutation_func, max_iter = 10000, print_iters = 100):
-    def __select(select_probs, n_pairs):
-        flat_inds = np.random.choice(np.arange(0, select_probs.shape[0]*select_probs.shape[1], 1), size = n_pairs, replace = False, p = select_probs.flatten())
-        out = np.zeros((2, n_pairs), dtype = np.int)
-        out[0] = np.floor(flat_inds / select_probs.shape[1]).astype(np.int)
-        out[1] = np.mod(flat_inds, select_probs.shape[0]).astype(np.int)
-        return out
 
-    '''
-    selects the n most fit indices from fitnesses
-    '''
-    def __select_elite(fitnesses, n):
-        return np.argpartition(-fitnesses, n)[:n]
 
+
+def __get_most_elite_inds(fitnesses, n):
+    return np.argpartition(-fitnesses, n)[:n]
+
+def __select(select_probs, n):
+    flat_inds = np.random.choice(np.arange(0, select_probs.shape[0]*select_probs.shape[1], 1), size = n, replace = False, p = select_probs.flatten())
+    out = np.zeros((2, n), dtype = np.int)
+    out[0] = np.floor(flat_inds / select_probs.shape[1]).astype(np.int)
+    out[1] = np.mod(flat_inds, select_probs.shape[0]).astype(np.int)
+    return out
+
+'''
+- X is list of initial iterates, where X[i] is the ith iterate.
+  X must be compatible with fitness_func(X).
+- fitness_func(X) is a numpy array where fitness_func[i] is the fitness of X[i]
+- n_elite is a number >= 0 that represents the number of candidates that remain
+  unchanged and are automatically included in the next generation.
+- selection_prob_func(fitness_func(X)) is a numpy array where
+  selection_prob_func(fitness_func(X))[i,j] is the probability X[i] and X[j]
+  producing offspring. All elements at or above the main diagonal are zero,
+  and the output is expected to sum to 1.
+- crossover_func(x1, x2), where x1 and x2 are of the same format as the
+  elements of X, returns y, where y is the offspring of x1 and x2 without
+  mutations applied constructed through however crossing over x1 and x2
+  is defined.
+- mutation_func(x) randomly mutates x, where x is the same format as
+  the elements of X.
+'''
+def optimize(X, fitness_func, n_elite, selection_prob_func, crossover_func, mutation_func, max_iter = 10000, print_iters = 100):
 
     for k in range(0, max_iter):
         fitnesses = fitness_func(X)
-        if k % print_iters == 0:
-            print("avg elite fitness (" + str(k) + "): " + str(np.average(fitnesses[__select_elite(fitnesses, n_elite)])))
-            #print("fitnesses (" + str(k) + "): " + str(fitnesses))
-            #print("X (" + str(k) + "): " + str(X))
+        elite_inds = __get_most_elite_inds(fitnesses, n_elite)
+        X_prime = []
+        for elite_ind in elite_inds:
+            X_prime.append(X[elite_ind])
+
         select_probs = selection_prob_func(fitnesses)
-        X_prime = np.zeros(X.shape, dtype = X.dtype)
-        X_prime[:n_elite] = X[__select_elite(fitnesses, n_elite)]
-        parent_pairs = __select(select_probs, X.shape[0] - n_elite)
-        parents1 = X[parent_pairs[0]]
-        parents2 = X[parent_pairs[1]]
-        X_prime[n_elite:] = crossover_func(parents1, parents2)
-        X_prime[n_elite:] = mutation_func(X_prime[n_elite:])
+        X_prime_parents = __select(select_probs, len(X) - len(X_prime))
+        for pair in range(X_prime_parents.shape[1]):
+            x = crossover_func(X[X_prime_parents[0,pair]], X[X_prime_parents[1,pair]])
+            x = mutation_func(x)
+            X_prime.append(x)
+
         X = X_prime
+        if k % print_iters == 0:
+            print("elite fitness (" + str(k) + "): " + str(fitnesses[elite_inds]))
     return X
+
+
 
 
 if __name__ == "__main__":
 
-    def crossover_func(X1, X2):
-        assert(X1.shape == X2.shape)
-        out = np.zeros(X1.shape, dtype = X1.dtype)
-        crossover_points = np.random.randint(0, X1.shape[1], size = X1.shape[0])
-        for i in range(out.shape[0]):
-            out[i, :crossover_points[i]] = X1[i, :crossover_points[i]]
-            out[i, crossover_points[i]:] = X2[i, crossover_points[i]:]
+    def crossover_func(x1, x2):
+        crossover_point = np.random.randint(0, min(len(x1), len(x2)))
+        out = []
+        for i in range(0, crossover_point):
+            out.append(x1[i])
+        for i in range(crossover_point, len(x2)):
+            out.append(x2[i])
         return out
 
-    def mutation_func(X):
+    def mutation_func(x):
+        out = []
+        for i in range(len(x)):
+            out.append(x[i] + np.random.randint(-1, 2))
+        return out
+        '''
         out = X.copy()
         for i in range(out.shape[0]):
             #j = np.random.randint(0, out.shape[1])
             #out[i,j] += np.random.randint(-1, 2)
             out[i] += np.random.randint(-1, 2)
-        return out
+        return out'''
 
 
     def selection_prob_func(fitnesses):
@@ -74,25 +91,22 @@ if __name__ == "__main__":
 
     def mixture_of_gaussians_fitness_func(centers, weights):
         def f(X):
-            out = np.zeros(X.shape[0])
+            out = np.zeros(len(X))
             for i in range(len(centers)):
-                out += weights[i] * np.exp(-0.1*np.square(np.linalg.norm(X - centers[i] , axis = 1)))
+                for j in range(len(out)):
+                    out[j] += weights[i] * np.exp(-.01*np.square(np.linalg.norm(X[j] - centers[i])))
             return out
         return f
 
-    #def fitness_func(X):
-    #    return np.exp(-0.01*np.square(np.linalg.norm(X, axis = 1)))
 
-    def neighbors_func(X):
-        cols = np.random.randint(0, X.shape[1], size = X.shape[0])
-        out = X.copy()
-        out[:,cols] += np.random.randint(-1,2,size = out.shape[0])
-        return out
-
-    X_0 = np.random.randint(-5, 6, size = (300, 25))
+    X_0 = np.random.randint(-5, 6, size = (50, 25))
     n_gaussians = 5
     centers = (3*(np.random.rand(n_gaussians, X_0.shape[1])-.5)).astype(np.int).astype(np.float32)
     weights = 0.1 + 10*np.random.rand(n_gaussians)
     fitness_func = mixture_of_gaussians_fitness_func(centers, weights)
     print("fitness_func upper bound possible (a very weak upper bound): ", np.sum(weights))
-    optimize(X_0, fitness_func, selection_prob_func, 5, crossover_func, mutation_func)
+
+    from func_arg_dict import FuncArgDict
+
+    f_arg_dict = FuncArgDict(optimize, fitness_func, 5, selection_prob_func, crossover_func, mutation_func)
+    f_arg_dict.call(X_0)
