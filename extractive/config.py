@@ -1,4 +1,4 @@
-config = {"density_parameter": 0.04, 
+config = {"density_parameter": 0.035, 
           "minimum_samples": 2,
           "min_clusters": 5,
           "min_chars_per_sentence": 35,

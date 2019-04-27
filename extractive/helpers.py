@@ -60,7 +60,6 @@ def sample(list_of_sentences, sentence_labels, features, num_clusters):
         cluster_core_samples = features[cluster_indices]
         average = np.mean(cluster_core_samples, axis = 0)
         distances_from_cluster = cosine_distances(features, average.reshape(1,-1))
-        
         sample_sentence_indices = np.argsort(distances_from_cluster.flatten())[:samples_per_cluster]
         for sentence_index in sample_sentence_indices:
             candidates.append(list_of_sentences[sentence_index])
