@@ -13,8 +13,7 @@ def encode(list_of_sentences, savePath = None):
         pickle.dump(sentencefeatures, open(savePath,"wb"))
     return sentencefeatures
 
-def decode(list_of_sentences, features = None, density_parameter = 0.04, 
-                       minimum_samples = 4, min_clusters = 5, min_num_candidates = 75):
+def decode(list_of_sentences, features = None):
     """Implements the 'encode' and 'decode' methods of the pipeline. density_parameter
         and minimum_samples are DBSCAN hyperparameters."""
     
