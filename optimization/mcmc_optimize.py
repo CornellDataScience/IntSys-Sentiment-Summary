@@ -34,17 +34,26 @@ def optimize(X, f, neighbors_func, accept_prob_func, k_max, S_0 = None):
 
 
 if __name__ == "__main__":
-    BETA = 1.0
+    '''
+    Below implements vanilla Metropolis Hastings
+    (Described in "Idea" section here:
+    https://en.wikipedia.org/wiki/Stochastic_tunneling)
+    to minimize f(X)
+    '''
+    BETA = 10.0
     def f(X, S):
-        return np.sum(np.square(X), axis = 1), None
+        return np.sum(np.square(X), axis = 1).astype(np.float32), None
 
     def neighbors_func(X):
-        return X + np.random.randint(-1,2,size = X.shape)
+        cols = np.random.randint(0, X.shape[1], size = X.shape[0])
+        out = X.copy()
+        out[:,cols] += np.random.randint(-1,2,size = out.shape[0])
+        return out
 
     def accept_prob_func(f_X, f_X_prime):
         out = np.exp(-BETA * (f_X_prime - f_X))
         out[np.where(out > 1)] = 1
         return out
 
-    X = np.random.randint(-5, 6, size = (5,5))
-    optimize(X, f, neighbors_func, accept_prob_func, 10000, S_0 = None)
+    X = np.random.randint(-20, 21, size = (5, 100))
+    optimize(X, f, neighbors_func, accept_prob_func, 100000, S_0 = None)

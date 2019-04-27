@@ -63,7 +63,10 @@ if __name__ == "__main__":
         return np.sum(np.square(X), axis = 1)
 
     def neighbors_func(X):
-        return X + np.random.randint(-1, 2, size = X.shape)
+        cols = np.random.randint(0, X.shape[1], size = X.shape[0])
+        out = X.copy()
+        out[:,cols] += np.random.randint(-1,2,size = out.shape[0])
+        return out
 
-    X_0 = np.random.randint(-5, 6, size = (20, 10))
+    X_0 = np.random.randint(-5, 6, size = (20, 100))
     optimize(X_0, energy_func, neighbors_func, acceptance_prob_func, 100000, energy_cache = NumpyKeyDict())
