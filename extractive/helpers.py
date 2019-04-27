@@ -13,7 +13,6 @@ def cut_out_shorts(list_of_sentences, features):
     return list_of_sentences,features
 
 def find_clusters(features):   
-    
     eps = config["density_parameter"]
     min_clusters = config["min_clusters"]
     max_acceptable_clusters = config["max_acceptable_clusters"]
@@ -30,10 +29,10 @@ def find_clusters(features):
         num_clusters = len(set(sentence_labels)) - 1
         
         if num_clusters < config["min_clusters"]:
-            minimum_samples = 3
+            minimum_samples = max(2, minimum_samples - 1)
             eps /= 0.9
         else:
-            minimum_samples += 1
+            minimum_samples = min(4, minimum_samples + 1)
             eps *= 0.9
         
         #if changing hyperparameters seems to be failing, break out and 
@@ -69,7 +68,7 @@ def sample(list_of_sentences, sentence_labels, features, num_clusters):
     return candidates
 
 
-def abstractive_cluster(features, sentence_labels):
+def abstractive_clustering(features, sentence_labels):
     means = []
     for cluster in set(sentence_labels):
         if cluster == -1:
