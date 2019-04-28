@@ -15,10 +15,43 @@ The pipeline is as follows:
 '''
 
 import sys
+import numpy as np
 import pandas as pd
 import gzip
 import nltk
+import pickle
 import evaluation as ev
+import torch
+import torchtext
+
+from utils.dataset import Dataset
+from autotransformer.transformer.flow import make_model
+from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
+
+def load_config(config):
+    """Loads Models and Data from paths listed in the initial config"""
+
+    data = Dataset().get_from_dir(config['dataset_path'])
+    config['dataset'] = data
+
+    if config['extractive']:
+        raise NotImplementedError('Matt maybe get an addition slacker')
+    else:
+        src_vocab = torch.load(config['src_vocab_path'])
+        trg_vocab = torch.load(config['src_vocab_path'])
+        model = make_model(len(src_vocab), len(trg_vocab))
+        model.load_state_dict(torch.load(config['autoencoder']))
+
+        config['src_vocab'] = src_vocab
+        config['trg_vocab'] = trg_vocab
+        config['autoencoder'] = model
+    
+    bert_config = BertConfig(config['BERT_config_path'])
+    bert = BertForSequenceClassification(bert_config, num_labels=1)
+    bert.load_state_dict(torch.load(config['BERT_finetune_path']))
+    config['BERT_finetune_model'] = bert
+
+    return config
 
 def getDF(path):
     '''
@@ -105,7 +138,7 @@ def most_helpful(df):
 
 
 #TODO: implement
-def encode(sentence):
+def encode(sentence, config):
     '''
     [encode sentence] returns a single encoding for a single 
     sentence. this will be used as a mapping function for 
@@ -117,42 +150,45 @@ def encode(sentence):
     #return encoding
 
 
-def encode_sentences(sentences):
+def encode_sentences(sentences, config):
     '''
     [encode_sentences sentences] returns a list of encodings for each
     sentence in sentences
     
     param [sentences]: the list of all tokenized review sentences in corpus
     '''
-    return list(map(lambda s: encode(s), sentences))
+    if config['extractive']:
+        raise NotImplementedError('Matt maybe get an addition slacker')
+    else:
+        con
 
 
 #TODO: implement
-def cluster(encodings):
+def cluster(encodings, config):
     raise NotImplementedError
     #return candidate_points
 
 #TODO: implement
-def decode(candidate_points):
+def decode(candidate_points, config):
     raise NotImplementedError
     #return candidate_sents
 
 #TODO: implement
-def optimize(candidate_sents):
+def optimize(candidate_sents, config):
     raise NotImplementedError
     #return solution
 
 
-def summarize(sentences):
+def summarize(sentences, uninitialized_config):
     '''
     param [sentences]: the list of all tokenized review sentences in corpus
     '''
     return 'Not implemented' #TODO: delete this line when finished implementing above functions
-
-    encodings = encode_sentences(sentences)
-    candidate_points = cluster(encodings)
-    candidate_sents = decode(candidate_points)
-    solution = optimize(candidate_sents)
+    config = load_config(uninitialized_config)
+    encodings = encode_sentences(sentences, config)
+    candidate_points = cluster(encodings, config)
+    candidate_sents = decode(candidate_points, config)
+    solution = optimize(candidate_sents, config)
     return solution
 
 
