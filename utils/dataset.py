@@ -37,8 +37,8 @@ class Dataset(object):
                 f_list = []
                 for sublist in lists:
                     #print(sublist)
-                    #for s in sublist:
-                    f_list.append(sublist)
+                    for s in sublist:
+                        f_list.append(s)
 
                 #print(f_list[:10])
 
@@ -50,8 +50,11 @@ class Dataset(object):
 
     def save_products(self, path):
         for product in self.products:
-            pickle.dump(product, open(os.path.join(path, "%s.pkl" %product.product_id), 'wb'))
+            pickle.dump(product, open(os.path.join(path, "%s.pkl" % product.product_id), 'wb'))
         print("Saved all Products")
+
+    def get_from_dir(dataset_path):
+        return pickle.load(open(dataset_path, 'rb'))
 
 class Product(object):
     def __init__(self, product_id, sentences, most_helpful_review):
