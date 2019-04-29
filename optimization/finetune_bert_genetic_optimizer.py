@@ -4,7 +4,7 @@ from optimizer import Optimizer
 import numpy as np
 
 
-class GeneticBertOptimzer(Optimizer):
+class GeneticBertOptimizer(Optimizer):
 
     '''
     The following keys are expected in params_dict:
