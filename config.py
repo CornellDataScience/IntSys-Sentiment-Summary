@@ -1,4 +1,4 @@
-"""The config dictionary for the whole summarization pipeline"""
+"""An example config dictionary for the whole summarization pipeline"""
 
 config = {
   'dataset_path':None,
@@ -11,7 +11,8 @@ config = {
   'src_vocab' : None,
   'trg_vocab_path' : None,
   'autoencoder_path': None,
-  'autoencoder':None
+  'autoencoder':None,
+  'ae_batchsize': 5000,
 
   'density_parameter': .04,
   'minimum_samples': 4,
@@ -22,6 +23,7 @@ config = {
   'BERT_finetune_path':None,
   'BERT_config_path': None,
   'BERT_finetune_model':None,
+  'BERT_batchsize': 100,
 
   'opt_function' : None,
   'opt_dict' = {
