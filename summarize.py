@@ -26,6 +26,7 @@ import torchtext
 
 from utils.dataset import Dataset
 from autotransformer.transformer.flow import make_model
+from autotransformer.summary_ae_datahandler import make_sentence_iterator
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
 
 def load_config(config):
@@ -57,7 +58,7 @@ def load_config(config):
 
 
 #TODO: implement
-def encode(sentence, config):
+def encode(sentences, config):
     '''
     [encode sentence] returns a single encoding for a single 
     sentence. this will be used as a mapping function for 
@@ -68,7 +69,21 @@ def encode(sentence, config):
     if config['extractive']:
         raise NotImplementedError('Matt maybe get an addition slacker')
     else:
-        config['autoencoder'].encode(sentence_iter)
+        model = config['autoencoder']
+        model.eval()
+        model.cuda()
+        
+        sent_data = make_sentence_iterator(sentences, config['device'][0], config['ae_batch_size'])
+        sent_iter, SRC, BOS_WORD, EOS_WORD, BLANK_WORD, CLS_WORD = sent_data
+
+        encodings = []
+        for i, batch in enumerate(sentence_iter):
+            src = batch.src.transpose(0, 1).cuda()
+            src_mask = (src != SRC.vocab.stoi[BLANK_WORD]).unsqueeze(-2).cuda()
+            batch_encodings = model.encode(sentence_iter)
+            for sent_encoding in batch_encodings:
+                encodings.append(sent_encoding[0,:])
+        return encodings
 
 
 
