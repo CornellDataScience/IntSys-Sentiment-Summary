@@ -118,7 +118,7 @@ def cluster(encodings, sentences, config):
             cluster_core_samples = encodings[cluster_indices]
             average = np.mean(cluster_core_samples, axis = 0)
             means.append(average)
-            return means
+        return means
 
     #return candidate_points
 

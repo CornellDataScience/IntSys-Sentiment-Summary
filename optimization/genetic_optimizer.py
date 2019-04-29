@@ -13,6 +13,7 @@ def __select(select_probs, n):
     out[1] = np.mod(flat_inds, select_probs.shape[0]).astype(np.int)
     return out
 
+
 '''
 - X is list of initial iterates, where X[i] is the ith iterate.
   X must be compatible with fitness_func(X).
@@ -30,7 +31,14 @@ def __select(select_probs, n):
 - mutation_func(x) randomly mutates x, where x is the same format as
   the elements of X.
 '''
-def optimize(X, fitness_func, n_elite, selection_prob_func, crossover_func, mutation_func, max_iter = 10000, print_iters = 100):
+def optimize(X, fitness_func, n_elite, selection_prob_func, crossover_func, mutation_func, max_iter, print_iters = 10):
+    '''fitness_func = hyper_args["fitness_func"]
+    n_elite = hyper_args["n_elite"]
+    selection_prob_func = hyper_args["selection_prob_func"]
+    crossover_func = hyper_args["crossover_func"]
+    mutation_func = hyper_args["mutation_func"]
+    max_iter = hyper_args["max_iter"]
+    print_iters = hyper_args["print_iters"]'''
 
     for k in range(0, max_iter):
         fitnesses = fitness_func(X)
@@ -70,14 +78,6 @@ if __name__ == "__main__":
         for i in range(len(x)):
             out.append(x[i] + np.random.randint(-1, 2))
         return out
-        '''
-        out = X.copy()
-        for i in range(out.shape[0]):
-            #j = np.random.randint(0, out.shape[1])
-            #out[i,j] += np.random.randint(-1, 2)
-            out[i] += np.random.randint(-1, 2)
-        return out'''
-
 
     def selection_prob_func(fitnesses):
         normed_fitnesses = fitnesses/np.sum(fitnesses)
@@ -87,7 +87,6 @@ if __name__ == "__main__":
                 out[i,j] = normed_fitnesses[i]*normed_fitnesses[j]
         out /= np.sum(out)
         return out
-
 
     def mixture_of_gaussians_fitness_func(centers, weights):
         def f(X):
