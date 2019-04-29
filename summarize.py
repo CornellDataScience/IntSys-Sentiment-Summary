@@ -23,7 +23,9 @@ import pickle
 import evaluation as ev
 import torch
 import torchtext
+import indicoio
 
+from extractive.helpers import find_clusters, sample
 from utils.dataset import Dataset
 from autotransformer.transformer.flow import make_model
 from autotransformer.summary_ae_datahandler import make_sentence_iterator
@@ -67,7 +69,10 @@ def encode(sentences, config):
     param [sentence]: the single sentence to be encoded
     '''
     if config['extractive']:
-        raise NotImplementedError('Matt maybe get an addition slacker')
+        API_KEY = "Private - contact if you need it!"
+        indicoio.config.api_key = API_KEY 
+        encodings = indicoio.text_features(sentences, version = 2)
+        return encodings
     else:
         model = config['autoencoder']
         model.eval()
@@ -97,15 +102,34 @@ def encode_sentences(sentences, config):
 
 
 #TODO: implement
-def cluster(encodings, config):
-    raise NotImplementedError
+def cluster(encodings, sentences, config):
+    if config['extractive']:
+        sentence_labels, num_clusters = find_clusters(encodings, config)
+        candidate_sentences = sample(sentences, sentence_labels, encodings, 
+                                     num_clusters, config)
+        return candidate_sentences
+    else:
+        sentence_labels, _ = find_clusters(encodings)
+        means = []
+        for cluster in set(sentence_labels):
+            if cluster == -1:
+                continue
+            cluster_indices = np.where(sentence_labels == cluster)
+            cluster_core_samples = encodings[cluster_indices]
+            average = np.mean(cluster_core_samples, axis = 0)
+            means.append(average)
+            return means
+
     #return candidate_points
 
 #TODO: implement
 def decode(candidate_points, config):
-    raise NotImplementedError
+    if config['extractive']:
+        return candidate_points
+    else:  
+        raise NotImplementedError('Wes maybe get additions that arent datasets')
     #return candidate_sents
-
+    
 #TODO: implement
 def optimize(candidate_sents, config):
     raise NotImplementedError
