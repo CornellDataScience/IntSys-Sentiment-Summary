@@ -7,7 +7,7 @@ class Optimizer(ABC):
     otherwise returns the values in dict associated with the keys
     in keys in the order each key appears in keys
     '''
-    def _unpack_dict(self, dict, keys):
+    def _unpack_dict(self, dict, *keys):
         out = []
         for key in keys:
             v = dict.get(key)
