@@ -2,8 +2,8 @@ import numpy as np
 from math import ceil
 from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_distances
-from config import config
 
+"""
 def cut_out_shorts(list_of_sentences, features):
     list_of_sentences = np.asarray(list(list_of_sentences))
     lengths = np.asarray([len(x) for x in list_of_sentences])
@@ -11,8 +11,9 @@ def cut_out_shorts(list_of_sentences, features):
     features = features[accepted_indices]
     list_of_sentences = list_of_sentences[accepted_indices]
     return list_of_sentences,features
+"""
 
-def find_clusters(features):   
+def find_clusters(features, config):   
     eps = config["density_parameter"]
     min_clusters = config["min_clusters"]
     max_acceptable_clusters = config["max_acceptable_clusters"]
@@ -42,10 +43,10 @@ def find_clusters(features):
                   + str(min_clusters) + " and " + str(max_acceptable_clusters))
             print("Ended loop with number of clusters: " + str(num_clusters))
             break
-    return sentence_labels, num_clusters, eps
+    return sentence_labels, num_clusters
 
 
-def sample(list_of_sentences, sentence_labels, features, num_clusters):
+def sample(list_of_sentences, sentence_labels, features, num_clusters, config):
     candidates = []
     
     #determine how many sentences to sample from each cluster
