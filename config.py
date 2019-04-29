@@ -5,6 +5,7 @@ config = {
   'dataset':None,
 
   'extractive': False,
+  'device':None,
 
   'src_vocab_path': None,
   'src_vocab' : None,

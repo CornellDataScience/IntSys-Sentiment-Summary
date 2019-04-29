@@ -31,6 +31,8 @@ from pytorch_pretrained_bert.modeling import BertForSequenceClassification, Bert
 def load_config(config):
     """Loads Models and Data from paths listed in the initial config"""
 
+    config['device'] = [torch.device("cuda" if torch.cuda.is_available() else "cpu")]
+
     data = Dataset().get_from_dir(config['dataset_path'])
     config['dataset'] = data
 
@@ -53,89 +55,6 @@ def load_config(config):
 
     return config
 
-def getDF(path):
-    '''
-    parsing method, returns pandas dataframe from given path
-    
-    param [path]: the review path, i.e. 'reviews_Video_Games.json.gz'
-    '''
-    print('<start getDF>')
-    
-    def parse(path):
-        g = gzip.open(path, 'rb')
-        for l in g:
-            yield eval(l)
-
-    i = 0
-    df = {}
-    for d in parse(path):
-        df[i] = d
-        i += 1
-    print('<finish getDF>')
-    return pd.DataFrame.from_dict(df, orient='index')
-
-
-#TODO: optimize, this takes too long
-def process_reviews(df):
-    '''
-    return the list of all tokenized review sentences in corpus 
-    
-    param [df]: parsed pandas dataframe 
-    '''
-    print('<start process_reviews>')
-    review_texts = list(df['reviewText']) 
-    review_sents = list(map(lambda c: nltk.sent_tokenize(c), review_texts))
-    rs_flatten = [item for items in review_sents for item in items]
-    print('<end process_reviews>')
-
-    return rs_flatten
-
-
-#TODO: optimize formula calculation?
-def most_helpful_ind(rev_hp):
-    '''
-    [helper method] returns index of the most helpful rating 
-    
-    param [rev_hp]: panda core series, taken in from process method
-    '''
-    print('<start mhi>')
-    occurences = list(map(lambda c: c[1], rev_hp))
-    max_occurence = max(occurences)
-
-    max_ind = 0
-    max_hp = 0
-    for x in range(len(rev_hp)):
-        num_helpful = rev_hp[x][0]
-        num_total = rev_hp[x][1]
-        if num_total == 0: continue
-
-        ratio_rating = num_helpful / num_total 
-        occ_rating = num_total / max_occurence 
-        
-        overall_rating = (0.75*ratio_rating) + (0.25*occ_rating) 
-        if overall_rating > max_hp: 
-            max_hp = overall_rating
-            max_ind = x
-
-    print('<end mhi>')
-    return max_ind
-
-
-def most_helpful(df):
-    '''
-    returns the most helpful review in the review corpus
-    
-    param [df]: parsed pandas dataframe 
-    '''
-    print('<start mh>')
-    review_hp = df['helpful']
-
-    best_rev_ind = most_helpful_ind(review_hp)
-    best_rev_txt = df.iloc[best_rev_ind]['reviewText']
-
-    print('<end mh>')
-    return best_rev_txt 
-
 
 #TODO: implement
 def encode(sentence, config):
@@ -146,8 +65,11 @@ def encode(sentence, config):
 
     param [sentence]: the single sentence to be encoded
     '''
-    raise NotImplementedError
-    #return encoding
+    if config['extractive']:
+        raise NotImplementedError('Matt maybe get an addition slacker')
+    else:
+        config['autoencoder'].encode(sentence_iter)
+
 
 
 def encode_sentences(sentences, config):
@@ -157,10 +79,6 @@ def encode_sentences(sentences, config):
     
     param [sentences]: the list of all tokenized review sentences in corpus
     '''
-    if config['extractive']:
-        raise NotImplementedError('Matt maybe get an addition slacker')
-    else:
-        con
 
 
 #TODO: implement
@@ -225,6 +143,92 @@ def print_first_5(lst):
 
     print_str += '... ]'
     print(print_str)
+
+
+
+"""I believe some of this is unneccesary, at least in this file"""
+# def getDF(path):
+#     '''
+#     parsing method, returns pandas dataframe from given path
+    
+#     param [path]: the review path, i.e. 'reviews_Video_Games.json.gz'
+#     '''
+#     print('<start getDF>')
+    
+#     def parse(path):
+#         g = gzip.open(path, 'rb')
+#         for l in g:
+#             yield eval(l)
+
+#     i = 0
+#     df = {}
+#     for d in parse(path):
+#         df[i] = d
+#         i += 1
+#     print('<finish getDF>')
+#     return pd.DataFrame.from_dict(df, orient='index')
+
+
+# #TODO: optimize, this takes too long
+# def process_reviews(df):
+#     '''
+#     return the list of all tokenized review sentences in corpus 
+    
+#     param [df]: parsed pandas dataframe 
+#     '''
+#     print('<start process_reviews>')
+#     review_texts = list(df['reviewText']) 
+#     review_sents = list(map(lambda c: nltk.sent_tokenize(c), review_texts))
+#     rs_flatten = [item for items in review_sents for item in items]
+#     print('<end process_reviews>')
+
+#     return rs_flatten
+
+
+# #TODO: optimize formula calculation?
+# def most_helpful_ind(rev_hp):
+#     '''
+#     [helper method] returns index of the most helpful rating 
+    
+#     param [rev_hp]: panda core series, taken in from process method
+#     '''
+#     print('<start mhi>')
+#     occurences = list(map(lambda c: c[1], rev_hp))
+#     max_occurence = max(occurences)
+
+#     max_ind = 0
+#     max_hp = 0
+#     for x in range(len(rev_hp)):
+#         num_helpful = rev_hp[x][0]
+#         num_total = rev_hp[x][1]
+#         if num_total == 0: continue
+
+#         ratio_rating = num_helpful / num_total 
+#         occ_rating = num_total / max_occurence 
+        
+#         overall_rating = (0.75*ratio_rating) + (0.25*occ_rating) 
+#         if overall_rating > max_hp: 
+#             max_hp = overall_rating
+#             max_ind = x
+
+#     print('<end mhi>')
+#     return max_ind
+
+
+# def most_helpful(df):
+#     '''
+#     returns the most helpful review in the review corpus
+    
+#     param [df]: parsed pandas dataframe 
+#     '''
+#     print('<start mh>')
+#     review_hp = df['helpful']
+
+#     best_rev_ind = most_helpful_ind(review_hp)
+#     best_rev_txt = df.iloc[best_rev_ind]['reviewText']
+
+#     print('<end mh>')
+#     return best_rev_txt 
 
 
 if __name__ == "__main__":
