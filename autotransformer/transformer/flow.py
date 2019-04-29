@@ -17,7 +17,7 @@ from .pointerwise_feedforward import PointerwiseFeedforward
 from .positional_encoding import PositionalEncoding
 
 
-def make_model(src_vocab, tgt_vocab, n=6, d_model=512, d_ff=2048, h=8, dropout=0.1):
+def make_model(src_vocab, tgt_vocab, n=5, d_model=300, d_ff=1024, h=4, dropout=0.1):
     """
     Helper: Construct a model from hyperparameters.
     """
@@ -82,3 +82,14 @@ def batch_size_fn(new, count, size_so_far):
     src_elements = count * max_src_in_batch
     tgt_elements = count * max_tgt_in_batch
     return max(src_elements, tgt_elements)
+
+def batch_size_fn_inference(new, count, size_so_far):
+    """
+    Keep augmenting batch and calculate total number of tokens + padding.
+    """
+    global max_src_in_batch
+    if count == 1:
+        max_src_in_batch = 0
+    max_src_in_batch = max(max_src_in_batch, len(new.src))
+    src_elements = count * max_src_in_batch
+    return src_elements

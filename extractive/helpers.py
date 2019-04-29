@@ -2,8 +2,8 @@ import numpy as np
 from math import ceil
 from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_distances
-from config import config
 
+"""
 def cut_out_shorts(list_of_sentences, features):
     list_of_sentences = np.asarray(list(list_of_sentences))
     lengths = np.asarray([len(x) for x in list_of_sentences])
@@ -11,25 +11,29 @@ def cut_out_shorts(list_of_sentences, features):
     features = features[accepted_indices]
     list_of_sentences = list_of_sentences[accepted_indices]
     return list_of_sentences,features
+"""
 
-def find_clusters(features):   
-    num_clusters = 0
+def find_clusters(features, config):   
     eps = config["density_parameter"]
     min_clusters = config["min_clusters"]
     max_acceptable_clusters = config["max_acceptable_clusters"]
     minimum_samples = config["minimum_samples"]
+    
+    num_clusters = 0
     num_iterations = 0
     while num_clusters < min_clusters or num_clusters > max_acceptable_clusters:
         num_iterations += 1
         clusterer = DBSCAN(eps = eps, min_samples = minimum_samples, metric = "cosine")
         sentence_labels = clusterer.fit_predict(features)
-        num_clusters = len(set(sentence_labels))
+        
+        #subtract one since DBSCAN considers non-clustered sentences to be in one large cluster
+        num_clusters = len(set(sentence_labels)) - 1
         
         if num_clusters < config["min_clusters"]:
-            minimum_samples = 3
+            minimum_samples = max(2, minimum_samples - 1)
             eps /= 0.9
         else:
-            minimum_samples += 1
+            minimum_samples = min(4, minimum_samples + 1)
             eps *= 0.9
         
         #if changing hyperparameters seems to be failing, break out and 
@@ -39,10 +43,10 @@ def find_clusters(features):
                   + str(min_clusters) + " and " + str(max_acceptable_clusters))
             print("Ended loop with number of clusters: " + str(num_clusters))
             break
-    return sentence_labels, num_clusters, eps
+    return sentence_labels, num_clusters
 
 
-def sample(list_of_sentences, sentence_labels, features, num_clusters):
+def sample(list_of_sentences, sentence_labels, features, num_clusters, config):
     candidates = []
     
     #determine how many sentences to sample from each cluster
@@ -57,10 +61,20 @@ def sample(list_of_sentences, sentence_labels, features, num_clusters):
         cluster_core_samples = features[cluster_indices]
         average = np.mean(cluster_core_samples, axis = 0)
         distances_from_cluster = cosine_distances(features, average.reshape(1,-1))
-        
         sample_sentence_indices = np.argsort(distances_from_cluster.flatten())[:samples_per_cluster]
         for sentence_index in sample_sentence_indices:
             candidates.append(list_of_sentences[sentence_index])
             
     return candidates
-    
+
+
+def abstractive_clustering(features, sentence_labels):
+    means = []
+    for cluster in set(sentence_labels):
+        if cluster == -1:
+            continue
+        cluster_indices = np.where(sentence_labels == cluster)
+        cluster_core_samples = features[cluster_indices]
+        average = np.mean(cluster_core_samples, axis = 0)
+        means.append(average)
+    return means
