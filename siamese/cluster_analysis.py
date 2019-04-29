@@ -81,15 +81,15 @@ def cluster_topic_modelling(sentences, sentence_feat, labels, label_name):
     all_topics = []
 
     # TODO : Have to try various topic numbers
-    no_topics = 4
-    no_top_words = 7
+    no_topics = 2
+    no_top_words = 5
 
     for l in sorted(list(set(labels))):
         l_corpus = [sentences[i] for i in np.where(labels == l)[0]]
         l_vectorizer = CountVectorizer(stop_words = utils.STOP_WORDS)
         l_bow = l_vectorizer.fit_transform(l_corpus)
 
-        l_lda = LatentDirichletAllocation(n_topics=no_topics, max_iter=20, learning_method='online', learning_offset=50.,random_state=0).fit(l_bow)
+        l_lda = LatentDirichletAllocation(n_topics=no_topics, max_iter=20, learning_method='online', learning_offset=5.,random_state=0).fit(l_bow)
 
         # dictionary of topics
         l_topics = {} # {1 : [<keyword>, <keyword>, ...], ...}
@@ -136,6 +136,18 @@ def closest_to_avg(score_idxs, scores):
 
     min_idx = np.argmin(dist_to_avg)
     return avg_val, score_idxs[min_idx]
+
+def cluster_collapse_mean(embeddings, labels, num_around_mean):
+    idxs_to_keep = []
+
+    for l in sorted(list(set(labels))):
+        l_idxs = np.where(labels == l)[0]
+        l_embeddings = np.mean(embeddings[l_idxs, :], axis=0)
+
+        sorted_idxs = np.argsort(np.linalg.norm(embeddings[l_idxs, :] - l_embeddings, axis=1))
+        idxs_to_keep += list(l_idxs[sorted_idxs[ : num_around_mean]])
+
+    return idxs_to_keep
 
 # ================== CLUSTER COMPARISONS ==================
 
@@ -225,3 +237,16 @@ class ClusterStats(object):
 # def leacock_chodorow_cluster(sent1, sent2):
 #     #TODO
 #     pass
+
+# Want Similarity to Corpus
+# - Pick sentences in the cluster (try to ignore outliers by concentrating around the mean)
+#       - See similarity of sentences to that corpus vs. a random group of sentences, other corpi
+# - Use Wordnet based knowledge measures as well as PMI
+
+# Cluster Evaluation
+# 1. Semantic Coherence within a cluster:
+#   - Treat Cluster as Corpus (should we find a way to ignore outliers)
+#   - Index a one of the sentences into it & see avergae of top-n similar documents
+#   - Treat another cluster as a corpus, random group of sentneces as another corpus
+#   - Ratio of the two methods
+# 2. Wordnet Approaches to Semantic Coherence of a Cluster
