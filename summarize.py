@@ -169,8 +169,10 @@ def summarize_product(sentences, config):
     '''
     param [sentences]: the list of all tokenized review sentences in corpus
     '''
+    print(sentences[:20])
     encodings = encode(sentences, config)
-    candidate_points = cluster(encodings, sentences, config)
+    #candidate_points = cluster(encodings, sentences, config)
+    candidate_points = encodings[:20]
     candidate_sents = decode(candidate_points, config)
     for c in candidate_sents:
         print(c)

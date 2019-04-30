@@ -19,7 +19,7 @@ def make_sentence_iterator(sent_list, batch_size):
 
     examples = []
     for s in sent_list:
-        exp = data.Example.fromlist(s, [('src', SRC)])
+        exp = data.Example.fromlist([s], [('src', SRC)])
         examples.append(exp)
 
     sent_data = data.Dataset(examples, [('src', SRC)])
@@ -50,6 +50,7 @@ def greedy_decode(model, encodings, trg_vocab, max_len=30, EOS_WORD='</s>'):
             if sym == EOS_WORD:
                 break
             sentence_words.append(sym)
+            print(sentence_words)
         candidates.append(' '.join(sentence_words))
     return candidates
 
