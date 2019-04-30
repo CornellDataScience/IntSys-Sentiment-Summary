@@ -28,7 +28,7 @@ import indicoio
 from extractive.helpers import find_clusters, sample
 from utils.dataset import Dataset
 from autotransformer.transformer.flow import make_model
-from autotransformer.summary_ae_datahandler import make_sentence_iterator
+from autotransformer.summary_ae_datahandler import make_sentence_iterator, greedy_decode
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
 
 def load_config(config):
@@ -39,13 +39,11 @@ def load_config(config):
     data = Dataset().get_from_dir(config['dataset_path'])
     config['dataset'] = data
 
-    if config['extractive']:
-        raise NotImplementedError('Matt maybe get an addition slacker')
-    else:
+    if not config['extractive']:
         src_vocab = torch.load(config['src_vocab_path'])
-        trg_vocab = torch.load(config['src_vocab_path'])
+        trg_vocab = torch.load(config['trg_vocab_path'])
         model = make_model(len(src_vocab), len(trg_vocab))
-        model.load_state_dict(torch.load(config['autoencoder']))
+        model.load_state_dict(torch.load(config['autoencoder_path']))
 
         config['src_vocab'] = src_vocab
         config['trg_vocab'] = trg_vocab
@@ -59,14 +57,11 @@ def load_config(config):
     return config
 
 
-#TODO: implement
 def encode(sentences, config):
     '''
-    [encode sentence] returns a single encoding for a single 
-    sentence. this will be used as a mapping function for 
-    encode_sentences
-
-    param [sentence]: the single sentence to be encoded
+    [encode sentence] returns a list of sentence encodings
+    
+    sentences: str list
     '''
     if config['extractive']:
         API_KEY = "Private - contact if you need it!"
@@ -80,25 +75,16 @@ def encode(sentences, config):
         
         sent_data = make_sentence_iterator(sentences, config['device'][0], config['ae_batch_size'])
         sent_iter, SRC, BOS_WORD, EOS_WORD, BLANK_WORD, CLS_WORD = sent_data
+        SRC.vocab = config['src_vocab']
 
         encodings = []
-        for i, batch in enumerate(sentence_iter):
+        for i, batch in enumerate(sent_iter):
             src = batch.src.transpose(0, 1).cuda()
             src_mask = (src != SRC.vocab.stoi[BLANK_WORD]).unsqueeze(-2).cuda()
-            batch_encodings = model.encode(sentence_iter)
+            batch_encodings = model.encode(src, src_mask)
             for sent_encoding in batch_encodings:
-                encodings.append(sent_encoding[0,:])
+                encodings.append(sent_encoding[0,:].cpu().detach().numpy())
         return encodings
-
-
-
-def encode_sentences(sentences, config):
-    '''
-    [encode_sentences sentences] returns a list of encodings for each
-    sentence in sentences
-    
-    param [sentences]: the list of all tokenized review sentences in corpus
-    '''
 
 
 #TODO: implement
@@ -127,8 +113,7 @@ def decode(candidate_points, config):
     if config['extractive']:
         return candidate_points
     else:  
-        raise NotImplementedError('Wes maybe get additions that arent datasets')
-    #return candidate_sents
+        return greedy_decode(config['autoencoder'], candidate_points)
     
 #TODO: implement
 def optimize(candidate_sents, config):
