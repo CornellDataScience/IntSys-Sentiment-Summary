@@ -89,13 +89,16 @@ def encode(sentences, config):
 
 #TODO: implement
 def cluster(encodings, sentences, config):
+    #encodings can be list of lists or 2d numpy array; this casting is to
+    #prevent list of numpy arrays, which breaks some indexing operations
+    encodings = np.asarray(encodings)
     if config['extractive']:
         sentence_labels, num_clusters = find_clusters(encodings, config)
         candidate_sentences = sample(sentences, sentence_labels, encodings, 
                                      num_clusters, config)
         return candidate_sentences
     else:
-        sentence_labels, _ = find_clusters(encodings)
+        sentence_labels, _ = find_clusters(encodings, config)
         means = []
         for cluster in set(sentence_labels):
             if cluster == -1:
@@ -104,6 +107,8 @@ def cluster(encodings, sentences, config):
             cluster_core_samples = encodings[cluster_indices]
             average = np.mean(cluster_core_samples, axis = 0)
             means.append(average)
+        
+        #this returns a list of numpy arrays
         return means
 
     #return candidate_points
