@@ -31,6 +31,8 @@ def make_sentence_iterator(sent_list, batch_size):
 
 def greedy_decode(model, encodings, trg_vocab, max_len=30, EOS_WORD='</s>'):
     #TODO: batch this
+    model.cuda()
+    model.eval()
     candidates = []
     for candidate in encodings:
         candidate = torch.from_numpy(candidate).cuda()

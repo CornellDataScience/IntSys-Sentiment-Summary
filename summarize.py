@@ -172,6 +172,8 @@ def summarize_product(sentences, config):
     encodings = encode(sentences, config)
     candidate_points = cluster(encodings, sentences, config)
     candidate_sents = decode(candidate_points, config)
+    for c in candidate_sents:
+        print(c)
     solution = optimize(candidate_sents, config)
     return solution
 
