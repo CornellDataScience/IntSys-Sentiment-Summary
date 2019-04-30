@@ -69,9 +69,6 @@ class GeneticBertOptimizer(Optimizer):
 
 
 
-#TODO: Implement
-def bert_fitness_func(X, ):
-    return None
 
 '''
 assumes fitnesses are positive
@@ -166,5 +163,5 @@ if __name__ == "__main__":
         for j in range(np.random.randint(5,15)):
             X[i].append(np.random.randint(0, 10))
 
-    
+
     gen_bert_opt.optimize(X)
