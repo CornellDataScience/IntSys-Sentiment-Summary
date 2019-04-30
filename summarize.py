@@ -13,60 +13,60 @@ The pipeline is as follows:
 -optimize candidates to maximize BERT score
 -evaluate
 '''
-
-import sys
 import numpy as np
 import pandas as pd
 import gzip
 import nltk
 import pickle
-import evaluation as ev
+#import evaluation as ev
 import torch
 import torchtext
-import indicoio
-
+#import indicoio
+import utils
+import sys
+import json
+from pathlib import Path
 from extractive.helpers import find_clusters, sample
 from utils.dataset import Dataset
 from autotransformer.transformer.flow import make_model
-from autotransformer.summary_ae_datahandler import make_sentence_iterator
+from autotransformer.summary_ae_datahandler import make_sentence_iterator, greedy_decode
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
 
 def load_config(config):
     """Loads Models and Data from paths listed in the initial config"""
 
     config['device'] = [torch.device("cuda" if torch.cuda.is_available() else "cpu")]
+    sys.modules['dataset'] = utils.dataset 
 
-    data = Dataset().get_from_dir(config['dataset_path'])
-    config['dataset'] = data
+    #data = utils.dataset.Dataset().get_from_dir(Path(config['data_path']))
+    with open('data.json', 'r') as fp:
+        data = json.load(fp)
+        config['dataset'] = data
 
-    if config['extractive']:
-        raise NotImplementedError('Matt maybe get an addition slacker')
-    else:
-        src_vocab = torch.load(config['src_vocab_path'])
-        trg_vocab = torch.load(config['src_vocab_path'])
+    if not config['extractive']:
+        src_vocab = torch.load(Path(config['src_vocab_path']))
+        trg_vocab = torch.load(Path(config['trg_vocab_path']))
         model = make_model(len(src_vocab), len(trg_vocab))
-        model.load_state_dict(torch.load(config['autoencoder']))
+        model.load_state_dict(torch.load(Path(config['autoencoder_path'])))
 
         config['src_vocab'] = src_vocab
         config['trg_vocab'] = trg_vocab
         config['autoencoder'] = model
     
-    bert_config = BertConfig(config['BERT_config_path'])
+    bert_config = BertConfig(Path(config['BERT_config_path']).__str__())
     bert = BertForSequenceClassification(bert_config, num_labels=1)
-    bert.load_state_dict(torch.load(config['BERT_finetune_path']))
+    bert.load_state_dict(torch.load(Path(config['BERT_finetune_path'])))
     config['BERT_finetune_model'] = bert
 
-    return config
+    #return config
 
 
-#TODO: implement
 def encode(sentences, config):
     '''
-    [encode sentence] returns a single encoding for a single 
-    sentence. this will be used as a mapping function for 
-    encode_sentences
-
-    param [sentence]: the single sentence to be encoded
+    [encode sentence] returns a list of sentence encodings
+    
+    sentences: str list
+    returns 2d numpy array of encodings, shape: (n_sents, dim)
     '''
     if config['extractive']:
         API_KEY = "Private - contact if you need it!"
@@ -78,38 +78,32 @@ def encode(sentences, config):
         model.eval()
         model.cuda()
         
-        sent_data = make_sentence_iterator(sentences, config['device'][0], config['ae_batch_size'])
+        sent_data = make_sentence_iterator(sentences, config['ae_batchsize'])
         sent_iter, SRC, BOS_WORD, EOS_WORD, BLANK_WORD, CLS_WORD = sent_data
+        SRC.vocab = config['src_vocab']
 
         encodings = []
-        for i, batch in enumerate(sentence_iter):
+        for i, batch in enumerate(sent_iter):
             src = batch.src.transpose(0, 1).cuda()
             src_mask = (src != SRC.vocab.stoi[BLANK_WORD]).unsqueeze(-2).cuda()
-            batch_encodings = model.encode(sentence_iter)
+            batch_encodings = model.encode(src, src_mask)
             for sent_encoding in batch_encodings:
-                encodings.append(sent_encoding[0,:])
-        return encodings
-
-
-
-def encode_sentences(sentences, config):
-    '''
-    [encode_sentences sentences] returns a list of encodings for each
-    sentence in sentences
-    
-    param [sentences]: the list of all tokenized review sentences in corpus
-    '''
+                encodings.append(sent_encoding[0,:].cpu().detach().numpy())
+        return np.array(encodings)
 
 
 #TODO: implement
 def cluster(encodings, sentences, config):
+    #encodings can be list of lists or 2d numpy array; this casting is to
+    #prevent list of numpy arrays, which breaks some indexing operations
+    encodings = np.asarray(encodings)
     if config['extractive']:
         sentence_labels, num_clusters = find_clusters(encodings, config)
         candidate_sentences = sample(sentences, sentence_labels, encodings, 
                                      num_clusters, config)
         return candidate_sentences
     else:
-        sentence_labels, _ = find_clusters(encodings)
+        sentence_labels, _ = find_clusters(encodings, config)
         means = []
         for cluster in set(sentence_labels):
             if cluster == -1:
@@ -118,6 +112,8 @@ def cluster(encodings, sentences, config):
             cluster_core_samples = encodings[cluster_indices]
             average = np.mean(cluster_core_samples, axis = 0)
             means.append(average)
+        
+        #this returns a list of numpy arrays
         return means
 
     #return candidate_points
@@ -127,27 +123,12 @@ def decode(candidate_points, config):
     if config['extractive']:
         return candidate_points
     else:  
-        raise NotImplementedError('Wes maybe get additions that arent datasets')
-    #return candidate_sents
+        return greedy_decode(config['autoencoder'], candidate_points, config['trg_vocab'])
     
 #TODO: implement
 def optimize(candidate_sents, config):
     raise NotImplementedError
     #return solution
-
-
-def summarize(sentences, uninitialized_config):
-    '''
-    param [sentences]: the list of all tokenized review sentences in corpus
-    '''
-    return 'Not implemented' #TODO: delete this line when finished implementing above functions
-    config = load_config(uninitialized_config)
-    encodings = encode_sentences(sentences, config)
-    candidate_points = cluster(encodings, config)
-    candidate_sents = decode(candidate_points, config)
-    solution = optimize(candidate_sents, config)
-    return solution
-
 
 def evaluate(hypothesis, reference):
     '''
@@ -184,110 +165,57 @@ def print_first_5(lst):
     print(print_str)
 
 
+def summarize_product(sentences, config):
+    '''
+    param [sentences]: the list of all tokenized review sentences in corpus
+    '''
+    encodings = encode(sentences, config)
+    candidate_points = cluster(encodings, sentences, config)
+    candidate_sents = decode(candidate_points, config)
+    solution = optimize(candidate_sents, config)
+    return solution
 
-"""I believe some of this is unneccesary, at least in this file"""
-# def getDF(path):
-#     '''
-#     parsing method, returns pandas dataframe from given path
+def summarize_dataset(config):
+    load_config(config)
+    generated_reviews = []
+    for ix, sentences in config['dataset'].items():
+        sents = list(filter(lambda x: len(x) > 40, sentences))
+        output = summarize_product(sents, config)
+        print(output)
+        generated_reviews.append(output)
+    return generated_reviews
     
-#     param [path]: the review path, i.e. 'reviews_Video_Games.json.gz'
-#     '''
-#     print('<start getDF>')
-    
-#     def parse(path):
-#         g = gzip.open(path, 'rb')
-#         for l in g:
-#             yield eval(l)
-
-#     i = 0
-#     df = {}
-#     for d in parse(path):
-#         df[i] = d
-#         i += 1
-#     print('<finish getDF>')
-#     return pd.DataFrame.from_dict(df, orient='index')
-
-
-# #TODO: optimize, this takes too long
-# def process_reviews(df):
-#     '''
-#     return the list of all tokenized review sentences in corpus 
-    
-#     param [df]: parsed pandas dataframe 
-#     '''
-#     print('<start process_reviews>')
-#     review_texts = list(df['reviewText']) 
-#     review_sents = list(map(lambda c: nltk.sent_tokenize(c), review_texts))
-#     rs_flatten = [item for items in review_sents for item in items]
-#     print('<end process_reviews>')
-
-#     return rs_flatten
-
-
-# #TODO: optimize formula calculation?
-# def most_helpful_ind(rev_hp):
-#     '''
-#     [helper method] returns index of the most helpful rating 
-    
-#     param [rev_hp]: panda core series, taken in from process method
-#     '''
-#     print('<start mhi>')
-#     occurences = list(map(lambda c: c[1], rev_hp))
-#     max_occurence = max(occurences)
-
-#     max_ind = 0
-#     max_hp = 0
-#     for x in range(len(rev_hp)):
-#         num_helpful = rev_hp[x][0]
-#         num_total = rev_hp[x][1]
-#         if num_total == 0: continue
-
-#         ratio_rating = num_helpful / num_total 
-#         occ_rating = num_total / max_occurence 
-        
-#         overall_rating = (0.75*ratio_rating) + (0.25*occ_rating) 
-#         if overall_rating > max_hp: 
-#             max_hp = overall_rating
-#             max_ind = x
-
-#     print('<end mhi>')
-#     return max_ind
-
-
-# def most_helpful(df):
-#     '''
-#     returns the most helpful review in the review corpus
-    
-#     param [df]: parsed pandas dataframe 
-#     '''
-#     print('<start mh>')
-#     review_hp = df['helpful']
-
-#     best_rev_ind = most_helpful_ind(review_hp)
-#     best_rev_txt = df.iloc[best_rev_ind]['reviewText']
-
-#     print('<end mh>')
-#     return best_rev_txt 
-
-
 if __name__ == "__main__":
-    reviews = sys.argv[1] #the review path
-    print('Starting evaluation...')
-    df = getDF(reviews)
+    config = {
+    'dataset_path' : 'autotransformer/data/electronics_dataset_1.pkl',
+    'dataset' : None,
 
-    most_helpful = most_helpful(df) #the most helpful review
-    print("Most helpful review:")
-    print(most_helpful)
+    'extractive' : False,
+    'device' : None,
 
-    review_sents = process_reviews(df) #list of all sentences in review corpus
-    print("Processed review sentences:")
-    print_first_5(review_sents)
+    'src_vocab_path' : 'autotransformer/models/electronics/src_vocab.pt',
+    'src_vocab' : None,
+    'trg_vocab_path' : 'autotransformer/models/electronics/trg_vocab.pt',
+    'autoencoder_path': 'autotransformer/models/electronics/electronics_autoencoder_epoch7_weights.pt',
+    'autoencoder' : None,
+    'ae_batchsize': 5000,
 
-    summary = summarize(review_sents) #summarized reviews
-    print("Summary:")
-    print(summary)
+    'density_parameter' : .04,
+    'minimum_samples': 4,
+    'min_clusters': 5,
+    'max_acceptable_clusters':30,
+    'min_num_candidates': 100,
 
-    evaluation = evaluate(summary, most_helpful) #evaluation metrics
-    print("Evaluation of summary:")
-    print("Rouge scores: {} // Cosine similarity: {}".format(evaluation[0], evaluation[1]))
+    'BERT_finetune_path' : 'bert_finetune/models/finetune_electronics_mae1.pt',
+    'BERT_config_path' : 'bert_finetune/models/finetune_electronics_mae1config.json',
+    'BERT_finetune_model' : None,
+    'BERT_batchsize': 100,
 
+    'opt_function' : None,
+    'opt_dict' : {
+        'sentence_cap': 20,
+        'n_elite': 5,
+        'init_pop': 96,
+        } 
+    }
+    summarize_dataset(config)
