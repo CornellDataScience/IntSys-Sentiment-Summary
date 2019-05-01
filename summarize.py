@@ -28,6 +28,7 @@ import json
 from pathlib import Path
 from extractive.helpers import find_clusters, sample
 from utils.dataset import Dataset
+from bert_finetune.BERTEval import BERTpredictor
 from autotransformer.transformer.flow import make_model
 from autotransformer.summary_ae_datahandler import make_sentence_iterator, greedy_decode
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
@@ -35,7 +36,7 @@ from pytorch_pretrained_bert.modeling import BertForSequenceClassification, Bert
 def load_config(config):
     """Loads Models and Data from paths listed in the initial config"""
 
-    config['device'] = [torch.device("cuda" if torch.cuda.is_available() else "cpu")]
+    config['device'] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     sys.modules['dataset'] = utils.dataset 
 
     #data = utils.dataset.Dataset().get_from_dir(Path(config['data_path']))
@@ -116,8 +117,6 @@ def cluster(encodings, sentences, config):
         #this returns a list of numpy arrays
         return means
 
-    #return candidate_points
-
 #TODO: implement
 def decode(candidate_points, config):
     if config['extractive']:
@@ -127,8 +126,10 @@ def decode(candidate_points, config):
     
 #TODO: implement
 def optimize(candidate_sents, config):
-    raise NotImplementedError
-    #return solution
+    bert = BERTpredictor(config, sents)
+    best_sents = peter_optimizer()
+    review = ' '.join([bert.sentences[i] for i in best_sents])
+    return review
 
 def evaluate(hypothesis, reference):
     '''
@@ -169,10 +170,8 @@ def summarize_product(sentences, config):
     '''
     param [sentences]: the list of all tokenized review sentences in corpus
     '''
-    print(sentences[:20])
     encodings = encode(sentences, config)
-    #candidate_points = cluster(encodings, sentences, config)
-    candidate_points = encodings[:20]
+    candidate_points = cluster(encodings, sentences, config)
     candidate_sents = decode(candidate_points, config)
     for c in candidate_sents:
         print(c)
@@ -185,7 +184,7 @@ def summarize_dataset(config):
     for ix, sentences in config['dataset'].items():
         sents = list(filter(lambda x: len(x) > 40, sentences))
         output = summarize_product(sents, config)
-        print(output)
+        print('Final Output:', output)
         generated_reviews.append(output)
     return generated_reviews
     
