@@ -28,6 +28,7 @@ import json
 from pathlib import Path
 from extractive.helpers import find_clusters, sample
 from utils.dataset import Dataset
+from bert_finetune.BERTEval import BERTpredictor
 from autotransformer.transformer.flow import make_model
 from autotransformer.summary_ae_datahandler import make_sentence_iterator, greedy_decode
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
@@ -35,7 +36,7 @@ from pytorch_pretrained_bert.modeling import BertForSequenceClassification, Bert
 def load_config(config):
     """Loads Models and Data from paths listed in the initial config"""
 
-    config['device'] = [torch.device("cuda" if torch.cuda.is_available() else "cpu")]
+    config['device'] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     sys.modules['dataset'] = utils.dataset
 
     #data = utils.dataset.Dataset().get_from_dir(Path(config['data_path']))
@@ -116,8 +117,6 @@ def cluster(encodings, sentences, config):
         #this returns a list of numpy arrays
         return means
 
-    #return candidate_points
-
 #TODO: implement
 def decode(candidate_points, config):
     if config['extractive']:
@@ -127,8 +126,25 @@ def decode(candidate_points, config):
 
 #TODO: implement
 def optimize(candidate_sents, config):
-    raise NotImplementedError
-    #return solution
+    bert = BERTpredictor(config, sents)
+    best_sents = peter_optimizer(bert, candidate_sents, config)
+    review = ' '.join([bert.sentences[i] for i in best_sents])
+    return review
+
+
+def peter_optimizer(bert, candidate_sents, config):
+    config['opt_dict']['max_sentence_ind'] = len(candidate_sents)#software gore
+    config['opt_dict']['eval_class'] = bert#straight-up software murder
+    length_range = config['opt_dict']['max_sentence_ind']
+    len_X = config['opt_dict']['optimize_population']
+    X = []
+    for i in range(len_X):
+        x_len = np.random.randint(length_range[0], length_range[1])
+        x = []
+        for j in range(x_len):
+            x.append(np.random.randint(0, len(candidate_sents)))
+        X.append(x)
+    return config['opt_function'].optimize(X, config)
 
 def evaluate(hypothesis, reference):
     '''
@@ -172,6 +188,8 @@ def summarize_product(sentences, config):
     encodings = encode(sentences, config)
     candidate_points = cluster(encodings, sentences, config)
     candidate_sents = decode(candidate_points, config)
+    for c in candidate_sents:
+        print(c)
     solution = optimize(candidate_sents, config)
     return solution
 
@@ -181,12 +199,14 @@ def summarize_dataset(config):
     for ix, sentences in config['dataset'].items():
         sents = list(filter(lambda x: len(x) > 40, sentences))
         output = summarize_product(sents, config)
-        print(output)
+        print('Final Output:', output)
         generated_reviews.append(output)
     return generated_reviews
 
 if __name__ == "__main__":
     from optimization.finetune_bert_genetic_optimizer import GeneticBertOptimizer
+
+
     config = {
     'dataset_path' : 'autotransformer/data/electronics_dataset_1.pkl',
     'dataset' : None,
@@ -212,11 +232,18 @@ if __name__ == "__main__":
     'BERT_finetune_model' : None,
     'BERT_batchsize': 100,
 
-    'opt_function' : None,
-    'opt_dict' : {
-        'sentence_cap': 20,
+    'opt_function' : GeneticBertOptimizer().optimize,
+
+    'opt_params_dict' : {
+        'optimize_population': 96,#for optimization methods with a population at optimization estimates,
+        #this is the number of optimization estimates used by the algorithm
         'n_elite': 5,
-        'init_pop': 96,
+        'length_range': (5,20),
+        'p_replace': .33,
+        'p_remove': .33,
+        'p_add': .33,
+        'max_iter': 100,
+        'print_iters': 10
         }
     }
     summarize_dataset(config)

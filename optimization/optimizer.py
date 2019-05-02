@@ -18,5 +18,5 @@ class Optimizer(ABC):
 
 
     @abstractmethod
-    def optimize(self, X):
+    def optimize(self, X, config):
         pass

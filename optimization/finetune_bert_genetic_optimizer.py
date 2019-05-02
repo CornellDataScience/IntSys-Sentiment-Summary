@@ -1,32 +1,12 @@
-from func_arg_dict import FuncArgDict
-import genetic_optimizer
-from optimizer import Optimizer
+
+import optimization.genetic_optimizer
+from optimization.optimizer import Optimizer
 import numpy as np
 
 
 class GeneticBertOptimizer(Optimizer):
 
-    '''
-    The following keys are expected in params_dict:
-        - "eval_class": an object that implements an evaluate(self, X) method, where X is
-          a list of lists of ints of sentence choices, and returns a 1d numpy array of
-          fitnesses, where the ith element is the fitness of X[i].
-        - "n_elite": the number of best-fitness individuals automatically placed in the
-          next generation.
-        - "max_sentence_ind": the number of candidate sentences from which reviews can be constructed.
-        - "length_range": a tuple, where the first element is the minimum number of
-          sentences that  may be used to construct a review, and the second element
-          is the maximum number of sentences that may be used to construct a review.
-        - "p_replace": the probability that, when mutating x, an element of
-          x is replaced with a different value.
-        - "p_remove": the probability that, when mutating x, an element of x
-          is removed from x.
-        - "p_add": the probability that, when mutating x, a random element
-          is inserted in x. (probabilities can just be relative, are normalized
-          anyway when used)
-        - "max_iter": the number of generations to run the genetic algorithm for
-        - "print_iter": how frequently (#of iterations between prints) the
-          genetic algorithm prints incremental performance.
+
     '''
     def __init__(self, **params_dict):
         self.__eval_class,\
@@ -54,19 +34,64 @@ class GeneticBertOptimizer(Optimizer):
                 self.__p_replace,\
                 self.__p_remove,\
                 self.__p_add)
+    '''
+    '''
+    The following keys are expected in config['opt_dict']:
+        - "eval_class": an object that implements an evaluate(self, X) method, where X is
+          a list of lists of ints of sentence choices, and returns a 1d numpy array of
+          fitnesses, where the ith element is the fitness of X[i].
+        - "n_elite": the number of best-fitness individuals automatically placed in the
+          next generation.
+        - "max_sentence_ind": the number of candidate sentences from which reviews can be constructed.
+        - "length_range": a tuple, where the first element is the minimum number of
+          sentences that  may be used to construct a review, and the second element
+          is the maximum number of sentences that may be used to construct a review.
+        - "p_replace": the probability that, when mutating x, an element of
+          x is replaced with a different value.
+        - "p_remove": the probability that, when mutating x, an element of x
+          is removed from x.
+        - "p_add": the probability that, when mutating x, a random element
+          is inserted in x. (probabilities can just be relative, are normalized
+          anyway when used)
+        - "max_iter": the number of generations to run the genetic algorithm for
+        - "print_iter": how frequently (#of iterations between prints) the
+          genetic algorithm prints incremental performance.
+    '''
+    def optimize(self, X, config):
+        eval_class,\
+        n_elite,\
+        max_sentence_ind,\
+        length_range,\
+        p_replace,\
+        p_remove,\
+        p_add,\
+        max_iter,\
+        print_iter = self._unpack_dict(config['opt_dict'],\
+        "eval_class",\
+        "n_elite",\
+        "max_sentence_ind",\
+        "length_range",\
+        "p_replace",\
+        "p_remove",\
+        "p_add",\
+        "max_iter",\
+        "print_iters")
+        genetic_optimizer_legal_mutate_func = \
+            lambda x: bert_mutation_func(x,\
+                max_sentence_ind,\
+                length_range,\
+                p_replace,\
+                p_remove,\
+                p_add)
 
-
-    def optimize(self, X):
         return genetic_optimizer.optimize(X,\
-            self.__eval_class.evaluate,\
-            self.__n_elite,\
+            eval_class.evaluate,\
+            n_elite,\
             bert_selection_prob_func,\
             simple_bert_crossover_func,\
-            self.__genetic_optimizer_legal_mutate_func,\
-            self.__max_iter,\
-            self.__print_iter)
-
-
+            genetic_optimizer_legal_mutate_func,\
+            max_iter,\
+            print_iter)
 
 
 
@@ -146,16 +171,7 @@ if __name__ == "__main__":
                 out[i] = np.exp(-sum)*(10 - (len(X[i])-5))
             return out
 
-    #order arguments applied when instantiating is arbitrary
-    gen_bert_opt = GeneticBertOptimizer(eval_class = DudEval(),\
-        max_sentence_ind = 10,\
-        n_elite = 10,\
-        length_range = (5,15),\
-        p_replace = .33,\
-        p_remove = .33,\
-        p_add = .33,\
-        max_iter = 100,\
-        print_iters = 10)
+    gen_bert_opt = GeneticBertOptimizer()
 
     X = []
     for i in range(100):
@@ -164,4 +180,17 @@ if __name__ == "__main__":
             X[i].append(np.random.randint(0, 10))
 
 
-    gen_bert_opt.optimize(X)
+    gen_bert_opt.optimize(X,\
+        {
+            'opt_dict': {
+                'eval_class': DudEval(),
+                'max_sentence_ind': 10,
+                'n_elite': 10,
+                'length_range': (5,15),
+                'p_replace': .33,
+                'p_remove': .33,
+                'p_add': .33,
+                'max_iter': 100,
+                'print_iters': 10
+            }
+        })
