@@ -1,5 +1,5 @@
 '''
-Outputs most helpful review, summary, and evaluation 
+Outputs most helpful review, summary, and evaluation
 of summary from input data path
 
 Example usage as script:
@@ -36,7 +36,7 @@ def load_config(config):
     """Loads Models and Data from paths listed in the initial config"""
 
     config['device'] = [torch.device("cuda" if torch.cuda.is_available() else "cpu")]
-    sys.modules['dataset'] = utils.dataset 
+    sys.modules['dataset'] = utils.dataset
 
     #data = utils.dataset.Dataset().get_from_dir(Path(config['data_path']))
     with open('data.json', 'r') as fp:
@@ -52,7 +52,7 @@ def load_config(config):
         config['src_vocab'] = src_vocab
         config['trg_vocab'] = trg_vocab
         config['autoencoder'] = model
-    
+
     bert_config = BertConfig(Path(config['BERT_config_path']).__str__())
     bert = BertForSequenceClassification(bert_config, num_labels=1)
     bert.load_state_dict(torch.load(Path(config['BERT_finetune_path'])))
@@ -64,20 +64,20 @@ def load_config(config):
 def encode(sentences, config):
     '''
     [encode sentence] returns a list of sentence encodings
-    
+
     sentences: str list
     returns 2d numpy array of encodings, shape: (n_sents, dim)
     '''
     if config['extractive']:
         API_KEY = "Private - contact if you need it!"
-        indicoio.config.api_key = API_KEY 
+        indicoio.config.api_key = API_KEY
         encodings = indicoio.text_features(sentences, version = 2)
         return encodings
     else:
         model = config['autoencoder']
         model.eval()
         model.cuda()
-        
+
         sent_data = make_sentence_iterator(sentences, config['ae_batchsize'])
         sent_iter, SRC, BOS_WORD, EOS_WORD, BLANK_WORD, CLS_WORD = sent_data
         SRC.vocab = config['src_vocab']
@@ -99,7 +99,7 @@ def cluster(encodings, sentences, config):
     encodings = np.asarray(encodings)
     if config['extractive']:
         sentence_labels, num_clusters = find_clusters(encodings, config)
-        candidate_sentences = sample(sentences, sentence_labels, encodings, 
+        candidate_sentences = sample(sentences, sentence_labels, encodings,
                                      num_clusters, config)
         return candidate_sentences
     else:
@@ -112,7 +112,7 @@ def cluster(encodings, sentences, config):
             cluster_core_samples = encodings[cluster_indices]
             average = np.mean(cluster_core_samples, axis = 0)
             means.append(average)
-        
+
         #this returns a list of numpy arrays
         return means
 
@@ -122,9 +122,9 @@ def cluster(encodings, sentences, config):
 def decode(candidate_points, config):
     if config['extractive']:
         return candidate_points
-    else:  
+    else:
         return greedy_decode(config['autoencoder'], candidate_points, config['trg_vocab'])
-    
+
 #TODO: implement
 def optimize(candidate_sents, config):
     raise NotImplementedError
@@ -132,14 +132,14 @@ def optimize(candidate_sents, config):
 
 def evaluate(hypothesis, reference):
     '''
-    return evaluation of hypothesis text (our output) compared to 
+    return evaluation of hypothesis text (our output) compared to
     reference text (gold standard)
 
     rouge score in form of tuple (f-score, precision, recall)
     cosine similarity in the form of float [0,1]
 
     param [hypothesis]: string of summary our model outputted
-    param [reference]: string of gold standard summary 
+    param [reference]: string of gold standard summary
     '''
     rouge = ev.evaluate_rouge(hypothesis, reference)
     #TODO: make sure embedding dimensions are good
@@ -153,7 +153,7 @@ def print_first_5(lst):
     '''
     print first 5 elements of lst
 
-    param [lst]: very long list that would take too 
+    param [lst]: very long list that would take too
     long to print fully
     '''
     print_str = '['
@@ -184,8 +184,9 @@ def summarize_dataset(config):
         print(output)
         generated_reviews.append(output)
     return generated_reviews
-    
+
 if __name__ == "__main__":
+    from optimization.finetune_bert_genetic_optimizer import GeneticBertOptimizer
     config = {
     'dataset_path' : 'autotransformer/data/electronics_dataset_1.pkl',
     'dataset' : None,
@@ -216,6 +217,6 @@ if __name__ == "__main__":
         'sentence_cap': 20,
         'n_elite': 5,
         'init_pop': 96,
-        } 
+        }
     }
     summarize_dataset(config)
