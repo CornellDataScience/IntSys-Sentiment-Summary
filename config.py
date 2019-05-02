@@ -1,6 +1,6 @@
 """An example config dictionary for the whole summarization pipeline"""
 
-config = {
+    config = {
     'dataset_path' : 'autotransformer/data/electronics_dataset_1.pkl',
     'dataset' : None,
 
@@ -25,10 +25,17 @@ config = {
     'BERT_finetune_model' : None,
     'BERT_batchsize': 100,
 
-    'opt_function' : None,
+    'opt_function' : GeneticBertOptimizer().optimize,
+
     'opt_dict' : {
-        'sentence_cap': 20,
+        'optimize_population': 96,#for optimization methods with a population at optimization estimates,
+        #this is the number of optimization estimates used by the algorithm
         'n_elite': 5,
-        'init_pop': 96,
-    } 
-}
+        'length_range': (5,20),
+        'p_replace': .33,
+        'p_remove': .33,
+        'p_add': .33,
+        'max_iter': 100,
+        'print_iters': 10
+        }
+    }

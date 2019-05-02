@@ -126,7 +126,7 @@ def decode(candidate_points, config):
 
 #TODO: implement
 def optimize(candidate_sents, config):
-    bert = BERTpredictor(config, sents)
+    bert = BERTpredictor(config, candidate_sents)
     best_sents = peter_optimizer(bert, candidate_sents, config)
     review = ' '.join([bert.sentences[i] for i in best_sents])
     return review
@@ -139,7 +139,7 @@ def peter_optimizer(bert, candidate_sents, config):
     len_X = config['opt_dict']['optimize_population']
     X = []
     for i in range(len_X):
-        x_len = np.random.randint(length_range[0], length_range[1])
+        x_len = np.random.randint(0, length_range)
         x = []
         for j in range(x_len):
             x.append(np.random.randint(0, len(candidate_sents)))
@@ -230,11 +230,11 @@ if __name__ == "__main__":
     'BERT_finetune_path' : 'bert_finetune/models/finetune_electronics_mae1.pt',
     'BERT_config_path' : 'bert_finetune/models/finetune_electronics_mae1config.json',
     'BERT_finetune_model' : None,
-    'BERT_batchsize': 100,
+    'BERT_batchsize': 25,
 
-    'opt_function' : GeneticBertOptimizer().optimize,
+    'opt_function' : GeneticBertOptimizer(),
 
-    'opt_params_dict' : {
+    'opt_dict' : {
         'optimize_population': 96,#for optimization methods with a population at optimization estimates,
         #this is the number of optimization estimates used by the algorithm
         'n_elite': 5,

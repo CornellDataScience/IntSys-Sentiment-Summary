@@ -1,5 +1,5 @@
 
-import optimization.genetic_optimizer
+import optimization.genetic_optimizer as genetic_optimizer
 from optimization.optimizer import Optimizer
 import numpy as np
 
