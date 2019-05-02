@@ -127,7 +127,7 @@ def decode(candidate_points, config):
 #TODO: implement
 def optimize(candidate_sents, config):
     bert = BERTpredictor(config, candidate_sents)
-    best_sents = peter_optimizer(bert, candidate_sents, config)
+    best_sents = peter_optimizer(bert, candidate_sents, config)[0]
     review = ' '.join([bert.sentences[i] for i in best_sents])
     return review
 
@@ -135,11 +135,11 @@ def optimize(candidate_sents, config):
 def peter_optimizer(bert, candidate_sents, config):
     config['opt_dict']['max_sentence_ind'] = len(candidate_sents)#software gore
     config['opt_dict']['eval_class'] = bert#straight-up software murder
-    length_range = config['opt_dict']['max_sentence_ind']
+    length_range = config['opt_dict']['length_range']
     len_X = config['opt_dict']['optimize_population']
     X = []
     for i in range(len_X):
-        x_len = np.random.randint(0, length_range)
+        x_len = np.random.randint(length_range[0], length_range[1])
         x = []
         for j in range(x_len):
             x.append(np.random.randint(0, len(candidate_sents)))
@@ -242,7 +242,7 @@ if __name__ == "__main__":
         'p_replace': .33,
         'p_remove': .33,
         'p_add': .33,
-        'max_iter': 100,
+        'max_iter': 5,
         'print_iters': 10
         }
     }
