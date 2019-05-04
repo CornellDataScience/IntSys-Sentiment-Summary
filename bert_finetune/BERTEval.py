@@ -19,7 +19,7 @@ class BERTpredictor():
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.length_penalty_range = config['opt_dict']['length_penalty_range']
         self.length_range = config['opt_dict']['length_range']
-        self.penalty_order = config['length_penalty_order']
+        self.length_penalty_order = config['length_penalty_order']
 
 
     def preprocess(self, candidate_ixs):

@@ -105,6 +105,7 @@ assumes fitnesses are positive
 '''
 def bert_selection_prob_func(fitnesses):
     out = np.outer(fitnesses, fitnesses)
+    out += .1
     out = np.tril(out)
     out /= np.sum(out)
     return out
@@ -158,49 +159,42 @@ def bert_mutation_func(x, prevent_dupe_sents, max_sentence_ind, length_range, p_
         x.insert(rand_ind, rand_val)
 
     if prevent_dupe_sents:
-        unused_inds = [(-1 if i in x else i) for i in range(0, max_sentence_ind)]
-        i = 0
-        while i < len(unused_inds):
-            if unused_inds[i] == -1:
-                del unused_inds[i]
-            else:
-                i += 1
-        i = 0
-        appearance_map = {}
+        __remove_dupes(x, max_sentence_ind)
 
-        for i in range(0, len(x)):
-            xi_appearances = appearance_map.get(x[i])
-            if xi_appearances is None:
-                appearance_map[x[i]] = []
-            appearance_map[x[i]].append(i)
 
-        for dupe in appearance_map:
-            dupe_appearances = appearance_map[dupe]
-            if len(dupe_appearances) != 1:
-                keep_appearance_ind = dupe_appearances[np.random.randint(0, len(dupe_appearances))]
-                for i in dupe_appearances:
-                    if i != keep_appearance_ind:
-                        if len(unused_inds) == 0:
-                            return x #there aren't enough candidate sentances to prevent duplicates
-                        x[i] = unused_inds.pop(np.random.randint(0, len(unused_inds)))
-
-        '''
-        for i in range(len(x)):
-            if len(appearance_map[x[i]]) != 1:
-                keep_appearance_ind = appearance_map[x[i]][np.random.randint(0, len(appearance_map[x[i]]))]
-                for repeat_ind in appearance_map[x[i]]:
-                    if repeat_ind != keep_appearance_ind:
-                        replace_ind = unused_inds.pop(np.random.randint(0, len(unused_inds)))
-                        x[repeat_ind] = replace_ind
-        '''
 
 
 
     return x
 
 
+def __remove_dupes(x, max_sentence_ind):
+    unused_inds = [(-1 if i in x else i) for i in range(0, max_sentence_ind)]
+    i = 0
+    while i < len(unused_inds):
+        if unused_inds[i] == -1:
+            del unused_inds[i]
+        else:
+            i += 1
+    i = 0
+    appearance_map = {}
 
+    for i in range(0, len(x)):
+        xi_appearances = appearance_map.get(x[i])
+        if xi_appearances is None:
+            appearance_map[x[i]] = []
+        appearance_map[x[i]].append(i)
 
+    for dupe in appearance_map:
+        dupe_appearances = appearance_map[dupe]
+        if len(dupe_appearances) != 1:
+            keep_appearance_ind = dupe_appearances[np.random.randint(0, len(dupe_appearances))]
+            for i in dupe_appearances:
+                if i != keep_appearance_ind:
+                    if len(unused_inds) == 0:
+                        return x #there aren't enough candidate sentances to prevent duplicates
+                    x[i] = unused_inds.pop(np.random.randint(0, len(unused_inds)))
+    return x
 
 if __name__ == "__main__":
     class DudEval:
