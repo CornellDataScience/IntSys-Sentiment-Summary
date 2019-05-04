@@ -19,6 +19,7 @@ class BERTpredictor():
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.length_penalty_range = config['opt_dict']['length_penalty_range']
         self.length_range = config['opt_dict']['length_range']
+        self.penalty_order = config['length_penalty_order']
 
 
     def preprocess(self, candidate_ixs):
@@ -65,10 +66,17 @@ class BERTpredictor():
 
         predictions = predictions[0].flatten()
         for i in range(len(candidate_ixs)):
-            predictions[i] *= self.__get_length_penalty_factor(len(candidate_ixs[i]))
+            predictions[i] *= self.__get_length_penalty_factor(len(candidate_ixs[i]), self.length_penalty_order)
 
         return predictions
 
-    def __get_length_penalty_factor(self, length):
+    def __get_length_penalty_factor(self, length, order):
+        '''
         len_frac = (length - self.length_range[0])/(self.length_range[1] - self.length_range[0])
         return self.length_penalty_range[0] + (1-len_frac)*(self.length_penalty_range[1] - self.length_penalty_range[0])
+        '''
+        min_len = self.length_range[0]
+        max_len = self.length_range[1]
+        min_weight = self.length_penalty_range[0]
+        max_weight = self.length_penalty_range[1]
+        return min_weight + (1 - ((length - min_len)/(max_len - min_len))**order)*(max_weight - min_weight)

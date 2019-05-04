@@ -97,6 +97,7 @@ def encode(sentences, config):
 def cluster(encodings, sentences, config):
     #encodings can be list of lists or 2d numpy array; this casting is to
     #prevent list of numpy arrays, which breaks some indexing operations
+
     encodings = np.asarray(encodings)
     if config['extractive']:
         sentence_labels, num_clusters = find_clusters(encodings, config)
@@ -116,6 +117,7 @@ def cluster(encodings, sentences, config):
 
         #this returns a list of numpy arrays
         return means
+
 
 #TODO: implement
 def decode(candidate_points, config):
@@ -216,7 +218,6 @@ def summarize_dataset(config):
 if __name__ == "__main__":
     from optimization.finetune_bert_genetic_optimizer import GeneticBertOptimizer
 
-
     config = {
     'dataset_path' : 'autotransformer/data/electronics_dataset_1.pkl',
     'dataset' : None,
@@ -234,13 +235,14 @@ if __name__ == "__main__":
     'density_parameter' : 2,
     'minimum_samples': 2,
     'min_clusters': 50,
-    'max_acceptable_clusters':100,
+    'max_acceptable_clusters': 200,
     'min_num_candidates': 250,
 
     'BERT_finetune_path' : 'models/electronics/finetune_electronics_mae1.pt',
     'BERT_config_path' : 'models/electronics/finetune_electronics_mae1config.json',
     'BERT_finetune_model' : None,
     'BERT_batchsize': 25,
+    'length_penalty_order': 2,
 
     'opt_function' : GeneticBertOptimizer(),
 
@@ -254,7 +256,7 @@ if __name__ == "__main__":
         'p_remove': .33,
         'p_add': .33,
         'prevent_dupe_sents': True,
-        'max_iter': 5,
+        'max_iter': 10,
         'print_iters': 1
         }
     }
