@@ -2,6 +2,7 @@ import indicoio
 import pickle
 from config import config
 from helpers import find_clusters, sample, abstractive_clustering, cut_out_shorts
+import json
 
 def extractive_encode(list_of_sentences, savePath = None):
     """Featurizes a list of sentences using the indico API"""
@@ -40,38 +41,75 @@ def abstractive_cluster(features):
 if __name__ == "__main__":
     import numpy as np
     #using test data of most popular review from electronics
-    text = pickle.load(open("popular_electronics_sentences.p","rb"))
-    features = pickle.load(open("electronics_popular_features.p","rb"))
-    text, features = cut_out_shorts(text, features, config)
+    #text = pickle.load(open("popular_electronics_sentences.p","rb"))
+    #print("loading text")
+    #text = json.load(open("data.json","r"))
+    #print(np.shape(text["0"]))
+    #print("loading features")
+    data = pickle.load(open("sample_embeddings.p","rb"))
+    data = data["B002YU83YO"]
+    text = data["sentences"]
+    features = data["embeddings"]
     features = np.asarray(features)
+    text, features = cut_out_shorts(text, features, config)
+    print(np.shape(text))
+    print(np.shape(features))
+    #means = abstractive_cluster(features)
+    #print(np.shape(means))
     
-    means = abstractive_cluster(features)
-    print(np.shape(means))
-    
+    print("clustering...")
     sentence_labels, num_clusters = extractive_cluster(features)
     sentences = extractive_decode(text, sentence_labels, features, num_clusters, config)
+    print("Number of clusters: " + str(num_clusters))
     print("Number of candidates: " + str(len(sentences)))
+    
     print(sentences[::len(sentences)//num_clusters])
     
-    
     def cluster(encodings, sentences, config):
-        if False:
+        if True:
             sentence_labels, num_clusters = find_clusters(encodings, config)
             candidate_sentences = sample(sentences, sentence_labels, encodings, 
                                          num_clusters, config)
             return candidate_sentences
         else:
-            sentence_labels, _ = find_clusters(encodings, config)
+            sentence_labels, num_clusters = find_clusters(encodings, config)
+            print("Number of clusters: " + str(num_clusters))
             means = []
             for cluster in set(sentence_labels):
+                print("CLUSTER " + str(cluster) + "\n")
                 if cluster == -1:
-                    continue
+                    pass
+                
                 cluster_indices = np.where(sentence_labels == cluster)
+                for i in cluster_indices[0][:10]:  
+                    print(sentences[i])
+                print("\n")
                 cluster_core_samples = encodings[cluster_indices]
                 average = np.mean(cluster_core_samples, axis = 0)
                 means.append(average)
+            print(len(means))
             return means
     
-    print(np.shape(cluster(features, [], config)))
-    print(type(cluster(features, [], config)))
-    print(type(cluster(features, [], config)[0]))
+    #print(cluster(features, text, config))
+    cluster(features, text, config)
+    #print(np.shape(cluster(features, text, config)))
+    #print(type(cluster(features, [], config)))
+    #print(type(cluster(features, [], config)[0]))
+    
+"""
+B000QUUFRW
+B000JE7GPY
+B000WL6YY8
+B003ES5ZUU
+B002YU83YO
+B008NMCPTQ
+B003LSTD38
+B000WYVBR0
+B001GTT0VO
+B0043WJRRS
+B00902SFC4
+B00GTGETFG
+B00007EDZG
+B002TLTGM6
+B0088CJT4U
+"""

@@ -1,7 +1,7 @@
 import numpy as np
 from math import ceil
 from sklearn.cluster import DBSCAN
-from sklearn.metrics.pairwise import cosine_distances
+from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 
 
 def cut_out_shorts(list_of_sentences, features, config):
@@ -69,11 +69,12 @@ def sample(list_of_sentences, sentence_labels, features, num_clusters, config):
         cluster_indices = np.where(sentence_labels == cluster)
         cluster_core_samples = features[cluster_indices]
         average = np.mean(cluster_core_samples, axis = 0)
-        distances_from_cluster = cosine_distances(features, average.reshape(1,-1))
+        distances_from_cluster = euclidean_distances(features, average.reshape(1,-1))
         sample_sentence_indices = np.argsort(distances_from_cluster.flatten())[:samples_per_cluster]
         for sentence_index in sample_sentence_indices:
             candidates.append(list_of_sentences[sentence_index])
-            
+            print(list_of_sentences[sentence_index])
+        print("#######")
     return candidates
 
 
