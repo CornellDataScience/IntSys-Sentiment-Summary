@@ -239,6 +239,7 @@ if __name__ == "__main__":
         #this is the number of optimization estimates used by the algorithm
         'n_elite': 5,
         'length_range': (5,20),
+        'length_penalty_range': (0.3, 1.0),
         'p_replace': .33,
         'p_remove': .33,
         'p_add': .33,

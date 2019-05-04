@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
-                              
+
 from tqdm import tqdm, trange
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
@@ -17,8 +17,10 @@ class BERTpredictor():
         self.device = config['device']
         self.sentences = [s.capitalize().replace(' .', '.') for s in sentences]
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.length_penalty_range = config['opt_dict']['length_penalty_range']
+        self.length_range = config['opt_dict']['length_range']
 
-    
+
     def preprocess(self, candidate_ixs):
         cand_reviews = []
         for cand_ix, cand in enumerate(candidate_ixs):
@@ -45,7 +47,7 @@ class BERTpredictor():
 
         self.model.to(self.device)
         self.model.eval()
-        
+
         predictions = []
 
         for batch in dataloader:
@@ -60,4 +62,13 @@ class BERTpredictor():
                 predictions[0] = np.append(
                     predictions[0], preds.detach().cpu().numpy(), axis=0)
 
-        return predictions[0].flatten()
+
+        predictions = predictions[0].flatten()
+        for i in range(len(candidate_ixs)):
+            predictions[i] *= self.__get_length_penalty_factor(len(candidate_ixs[i]))
+
+        return predictions
+
+    def __get_length_penalty_factor(self, length):
+        len_frac = (length - self.length_range[0])/(self.length_range[1] - self.length_range[0])
+        return self.length_penalty_range[0] + (1-len_frac)*(self.length_penalty_range[1] - self.length_penalty_range[0])
