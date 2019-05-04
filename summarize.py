@@ -18,7 +18,7 @@ import pandas as pd
 import gzip
 import nltk
 import pickle
-#import evaluation as ev
+import evaluation as ev
 import torch
 import torchtext
 #import indicoio
@@ -146,7 +146,7 @@ def peter_optimizer(bert, candidate_sents, config):
         X.append(x)
     return config['opt_function'].optimize(X, config)
 
-def evaluate(hypothesis, reference):
+def evaluate(hyp_text, ref_text, hyp_enc, ref_enc):
     '''
     return evaluation of hypothesis text (our output) compared to
     reference text (gold standard)
@@ -154,15 +154,17 @@ def evaluate(hypothesis, reference):
     rouge score in form of tuple (f-score, precision, recall)
     cosine similarity in the form of float [0,1]
 
-    param [hypothesis]: string of summary our model outputted
-    param [reference]: string of gold standard summary
-    '''
-    rouge = ev.evaluate_rouge(hypothesis, reference)
-    #TODO: make sure embedding dimensions are good
-    cos_sim = 0 #ev.evaluate_embeddings(encode(hypothesis), encode(reference))
-    #TODO: get rid of 0 when encode is done
+    param [hyp_text]: string of our summary text
+    param [ref_text]: string of gold standard summary
 
-    return rouge, cos_sim
+    param [hyp_enc]: 1d numpy array of our summary embedding
+    param [ref_enc]: 1d numpy array of gold standard embedding, 
+                        must be same dimensions as above
+    '''
+    eval_dict = ev.evaluate_rouge(hyp_text, ref_text)
+    eval_dict['cos_sim'] = ev.evaluate_embeddings(hyp_enc, ref_enc)
+    
+    return eval_dict
 
 
 def print_first_5(lst):

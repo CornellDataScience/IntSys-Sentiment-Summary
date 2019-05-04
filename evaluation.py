@@ -13,6 +13,7 @@ ev.evaluate_embeddings(<hyp vector>, <ref vector>)
 '''
 
 import rouge
+import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 def get_scores(hyp, ref):
@@ -80,42 +81,32 @@ def evaluate_rouge(hyp, ref):
     produce aggregate evaluation of hyp_list and ref_list
     and print to terminal
     '''
-    print("outputting f, p, r for each rouge metric...")
+    #print("outputting f, p, r for each rouge metric...")
 
     rouge_types = ['rouge-1','rouge-2', 
                 'rouge-3', 'rouge-4', 'rouge-l', 'rouge-w']
 
-    fpr_list = []
+    fpr_dict = dict()
 
     for r in rouge_types:
         score = get_scores(hyp, ref)
         rouge = extract_rtype(score, r)
-        fpr = (r, extract_fpr(rouge, 'f'), extract_fpr(rouge, 'p'), extract_fpr(rouge, 'r'))
-        print("type: {} f: {} p: {} r: {}".format(fpr[0], fpr[1], fpr[2], fpr[3]))
-        fpr_list.append(fpr)
+        # fpr = (r, extract_fpr(rouge, 'f'), extract_fpr(rouge, 'p'), extract_fpr(rouge, 'r'))
+        # print("type: {} f: {} p: {} r: {}".format(fpr[0], fpr[1], fpr[2], fpr[3]))
+        fpr_dict[r] = (extract_fpr(rouge, 'f'), extract_fpr(rouge, 'p'), extract_fpr(rouge, 'r'))
 
-    return fpr_list
+    return fpr_dict
 
     
 
 def evaluate_embeddings(hyp_encoding, ref_encoding):
-    metrics = cosine_similarity(hyp_encoding, ref_encoding)
-    return metrics
+    vec1 = hyp_encoding.reshape(1, -1)
+    vec2 = ref_encoding.reshape(1, -1)
+    metrics = cosine_similarity(vec1, vec2)
+    cs_float = metrics[0][0]
+    return cs_float
 
 
 if __name__ == "__main__" :
-    # scores = get_scores(["the cat ate the rat", "hello hi world"], ["the fat cat ate the rat", "hello world"])
-    # print(scores)
-    # print(type(scores[0]))
-
-    # rouge_1s = extract_rtype(scores, 'rouge-1')
-    # print(rouge_1s)
-
-    # recalls = extract_fpr(rouge_1s, 'r')
-    # print(recalls)
-
-    # avg_recalls = get_avg(recalls)
-    # print(avg_recalls)
-
-
     evaluate_rouge("the cat ate the rat", "the fat cat ate the rat")
+    print(evaluate_embeddings(np.array([1,2,7,5,6]), np.array([3,5, 4,0,6])))
