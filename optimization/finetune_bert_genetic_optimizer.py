@@ -1,4 +1,4 @@
-
+from functools import partial
 import optimization.genetic_optimizer as genetic_optimizer
 from optimization.optimizer import Optimizer
 import numpy as np
@@ -56,6 +56,8 @@ class GeneticBertOptimizer(Optimizer):
         - "max_iter": the number of generations to run the genetic algorithm for
         - "print_iter": how frequently (#of iterations between prints) the
           genetic algorithm prints incremental performance.
+
+         #TODO: need to update this to add a couple new arguments
     '''
     def optimize(self, X, config):
         eval_class,\
@@ -66,6 +68,7 @@ class GeneticBertOptimizer(Optimizer):
         p_remove,\
         p_add,\
         max_iter,\
+        prevent_dupe_sents,\
         print_iter = self._unpack_dict(config['opt_dict'],\
         "eval_class",\
         "n_elite",\
@@ -75,9 +78,11 @@ class GeneticBertOptimizer(Optimizer):
         "p_remove",\
         "p_add",\
         "max_iter",\
+        "prevent_dupe_sents",\
         "print_iters")
         genetic_optimizer_legal_mutate_func = \
             lambda x: bert_mutation_func(x,\
+                prevent_dupe_sents,
                 max_sentence_ind,\
                 length_range,\
                 p_replace,\
@@ -123,10 +128,9 @@ def simple_bert_crossover_func(x1, x2):
 '''
 assumes p_replace + p_remove + p_add == 1
 '''
-def bert_mutation_func(x, max_sentence_ind, length_range, p_replace, p_remove, p_add):
+def bert_mutation_func(x, prevent_dupe_sents, max_sentence_ind, length_range, p_replace, p_remove, p_add):
     #doesn't take any care currently to ensure a sentence isn't duplicated
     assert(len(x) >= length_range[0] and len(x) <= length_range[1])
-
     probs = np.array([p_replace, p_remove, p_add])
     if len(x) <= length_range[0]:
         probs[1] = 0
@@ -141,19 +145,62 @@ def bert_mutation_func(x, max_sentence_ind, length_range, p_replace, p_remove, p
         rand_ind = np.random.randint(0, len(x))
         rand_val = np.random.randint(0, max_sentence_ind)
         x[rand_ind] = rand_val
-        return x
+
     elif p < probs[0] + probs[1]:
         #remove
         rand_ind = np.random.randint(0, len(x))
         del x[rand_ind]
-        return x
+
     elif p < probs[0] + probs[1] + probs[2]:
         #add
         rand_ind = np.random.randint(0, len(x))
         rand_val = np.random.randint(0, max_sentence_ind)
         x.insert(rand_ind, rand_val)
-        return x
+
+    if prevent_dupe_sents:
+        unused_inds = [(-1 if i in x else i) for i in range(0, max_sentence_ind)]
+        i = 0
+        while i < len(unused_inds):
+            if unused_inds[i] == -1:
+                del unused_inds[i]
+            else:
+                i += 1
+        i = 0
+        appearance_map = {}
+
+        for i in range(0, len(x)):
+            xi_appearances = appearance_map.get(x[i])
+            if xi_appearances is None:
+                appearance_map[x[i]] = []
+            appearance_map[x[i]].append(i)
+
+        for dupe in appearance_map:
+            dupe_appearances = appearance_map[dupe]
+            if len(dupe_appearances) != 1:
+                keep_appearance_ind = dupe_appearances[np.random.randint(0, len(dupe_appearances))]
+                for i in dupe_appearances:
+                    if i != keep_appearance_ind:
+                        if len(unused_inds) == 0:
+                            return x #there aren't enough candidate sentances to prevent duplicates
+                        x[i] = unused_inds.pop(np.random.randint(0, len(unused_inds)))
+
+        '''
+        for i in range(len(x)):
+            if len(appearance_map[x[i]]) != 1:
+                keep_appearance_ind = appearance_map[x[i]][np.random.randint(0, len(appearance_map[x[i]]))]
+                for repeat_ind in appearance_map[x[i]]:
+                    if repeat_ind != keep_appearance_ind:
+                        replace_ind = unused_inds.pop(np.random.randint(0, len(unused_inds)))
+                        x[repeat_ind] = replace_ind
+        '''
+
+
+
     return x
+
+
+
+
 
 if __name__ == "__main__":
     class DudEval:

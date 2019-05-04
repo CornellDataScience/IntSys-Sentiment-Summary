@@ -20,4 +20,4 @@ __pycache__/
 *.json
 
 #big models
-autotransformer/models/
+models/

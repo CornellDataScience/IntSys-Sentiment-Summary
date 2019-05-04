@@ -134,15 +134,23 @@ def optimize(candidate_sents, config):
 
 def peter_optimizer(bert, candidate_sents, config):
     config['opt_dict']['max_sentence_ind'] = len(candidate_sents)#software gore
+    print("number of candidate sentences: ", len(candidate_sents))
     config['opt_dict']['eval_class'] = bert#straight-up software murder
     length_range = config['opt_dict']['length_range']
     len_X = config['opt_dict']['optimize_population']
     X = []
+    sent_range = np.arange(0, len(candidate_sents), 1)
     for i in range(len_X):
         x_len = np.random.randint(length_range[0], length_range[1])
-        x = []
+        '''x = []
         for j in range(x_len):
             x.append(np.random.randint(0, len(candidate_sents)))
+        '''
+        x = None
+        if x_len <= len(candidate_sents):
+            x = np.random.choice(sent_range, size = (x_len), replace = False).tolist()
+        else:
+            x = np.random.choice(sent_range, size = (x_len), replace = True).tolist()
         X.append(x)
     return config['opt_function'].optimize(X, config)
 
@@ -158,12 +166,12 @@ def evaluate(hyp_text, ref_text, hyp_enc, ref_enc):
     param [ref_text]: string of gold standard summary
 
     param [hyp_enc]: 1d numpy array of our summary embedding
-    param [ref_enc]: 1d numpy array of gold standard embedding, 
+    param [ref_enc]: 1d numpy array of gold standard embedding,
                         must be same dimensions as above
     '''
     eval_dict = ev.evaluate_rouge(hyp_text, ref_text)
     eval_dict['cos_sim'] = ev.evaluate_embeddings(hyp_enc, ref_enc)
-    
+
     return eval_dict
 
 
@@ -216,10 +224,10 @@ if __name__ == "__main__":
     'extractive' : False,
     'device' : None,
 
-    'src_vocab_path' : 'autotransformer/models/electronics/src_vocab.pt',
+    'src_vocab_path' : 'models/electronics/src_vocab.pt',
     'src_vocab' : None,
-    'trg_vocab_path' : 'autotransformer/models/electronics/trg_vocab.pt',
-    'autoencoder_path': 'autotransformer/models/electronics/electronics_autoencoder_epoch7_weights.pt',
+    'trg_vocab_path' : 'models/electronics/trg_vocab.pt',
+    'autoencoder_path': 'models/electronics/electronics_autoencoder_epoch7_weights.pt',
     'autoencoder' : None,
     'ae_batchsize': 5000,
 
@@ -229,8 +237,8 @@ if __name__ == "__main__":
     'max_acceptable_clusters':30,
     'min_num_candidates': 100,
 
-    'BERT_finetune_path' : 'bert_finetune/models/finetune_electronics_mae1.pt',
-    'BERT_config_path' : 'bert_finetune/models/finetune_electronics_mae1config.json',
+    'BERT_finetune_path' : 'models/electronics/finetune_electronics_mae1.pt',
+    'BERT_config_path' : 'models/electronics/finetune_electronics_mae1config.json',
     'BERT_finetune_model' : None,
     'BERT_batchsize': 25,
 
@@ -245,8 +253,9 @@ if __name__ == "__main__":
         'p_replace': .33,
         'p_remove': .33,
         'p_add': .33,
+        'prevent_dupe_sents': True,
         'max_iter': 5,
-        'print_iters': 10
+        'print_iters': 1
         }
     }
     summarize_dataset(config)
