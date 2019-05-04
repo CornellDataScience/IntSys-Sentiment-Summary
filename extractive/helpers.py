@@ -10,6 +10,10 @@ def cut_out_shorts(list_of_sentences, features, config):
     accepted_indices = np.argwhere(lengths > config["min_chars_per_sentence"]).flatten()
     features = features[accepted_indices]
     list_of_sentences = list_of_sentences[accepted_indices]
+    lengths = np.asarray([len(x) for x in list_of_sentences])
+    accepted_indices = np.argwhere(lengths < 300).flatten()
+    features = features[accepted_indices]
+    list_of_sentences = list_of_sentences[accepted_indices]
     return list_of_sentences,features
 
 
@@ -21,25 +25,29 @@ def find_clusters(features, config):
     
     num_clusters = 0
     num_iterations = 0
-    while num_clusters < min_clusters or num_clusters > max_acceptable_clusters:
+    while num_clusters < min_clusters - num_iterations or num_clusters > max_acceptable_clusters:
         num_iterations += 1
         
+        clusterer = DBSCAN(eps = eps, min_samples = minimum_samples, metric = "l2")
+        sentence_labels = clusterer.fit_predict(features)
+        
         if num_clusters < min_clusters:
-            minimum_samples = max(2, minimum_samples - 1)
-            eps /= 0.9
+            if max(set(sentence_labels), key=list(sentence_labels).count) == -1:
+                minimum_samples = max(2, minimum_samples - 1)
+                eps /= 0.85
+            else:
+                eps *= .6
         elif num_clusters > max_acceptable_clusters:
             minimum_samples = minimum_samples + 1
             eps *= 0.85
-        
-        clusterer = DBSCAN(eps = eps, min_samples = minimum_samples, metric = "cosine")
-        sentence_labels = clusterer.fit_predict(features)
+
         
         #subtract one since DBSCAN considers non-clustered sentences to be in one large cluster
         num_clusters = len(set(sentence_labels)) - 1
-        
+        print("Iteration:" + str(num_iterations) + " Num clusters: " + str(num_clusters))
         #if changing hyperparameters seems to be failing, break out and 
         #prevent infinite loop
-        if num_iterations > 15:
+        if num_iterations > 25:
             print("Failed to create num_clusters between bounds " 
                   + str(min_clusters) + " and " + str(max_acceptable_clusters))
             print("Ended loop with number of clusters: " + str(num_clusters))

@@ -1,6 +1,6 @@
-config = {"density_parameter": 0.04, 
+config = {"density_parameter": 2, 
           "minimum_samples": 2,
-          "min_clusters": 5,
-          "min_chars_per_sentence": 35,
-          "min_num_candidates": 100,
-          "max_acceptable_clusters": 30 }
+          "min_clusters": 50,
+          "min_chars_per_sentence": 42,
+          "min_num_candidates": 500,
+          "max_acceptable_clusters": 100 }
