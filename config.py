@@ -14,11 +14,11 @@ config = {
     'autoencoder':None,
     'ae_batchsize': 5000,
 
-    'density_parameter': .04,
-    'minimum_samples': 4,
-    'min_clusters': 5,
-    'max_acceptable_clusters':30,
-    'min_num_candidates': 100,
+    'density_parameter': 2,
+    'minimum_samples': 2,
+    'min_clusters': 50,
+    'max_acceptable_clusters':100,
+    'min_num_candidates': 200,
 
     'BERT_finetune_path':'bert_finetune/models/finetune_electronics_mae1.pt',
     'BERT_config_path': 'bert_finetune/models/finetune_electronics_mae1config.json',
