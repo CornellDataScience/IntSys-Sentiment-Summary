@@ -40,7 +40,7 @@ def load_config(config):
     sys.modules['dataset'] = utils.dataset
 
     #data = utils.dataset.Dataset().get_from_dir(Path(config['data_path']))
-    with open('data.json', 'r') as fp:
+    with open(config['data_path'], 'r') as fp:
         data = json.load(fp)
         config['dataset'] = data
 
@@ -97,6 +97,7 @@ def encode(sentences, config):
 def cluster(encodings, sentences, config):
     #encodings can be list of lists or 2d numpy array; this casting is to
     #prevent list of numpy arrays, which breaks some indexing operations
+
     encodings = np.asarray(encodings)
     if config['extractive']:
         sentence_labels, num_clusters = find_clusters(encodings, config)
@@ -117,6 +118,7 @@ def cluster(encodings, sentences, config):
         #this returns a list of numpy arrays
         return means
 
+
 #TODO: implement
 def decode(candidate_points, config):
     if config['extractive']:
@@ -134,15 +136,23 @@ def optimize(candidate_sents, config):
 
 def peter_optimizer(bert, candidate_sents, config):
     config['opt_dict']['max_sentence_ind'] = len(candidate_sents)#software gore
+    print("number of candidate sentences: ", len(candidate_sents))
     config['opt_dict']['eval_class'] = bert#straight-up software murder
     length_range = config['opt_dict']['length_range']
     len_X = config['opt_dict']['optimize_population']
     X = []
+    sent_range = np.arange(0, len(candidate_sents), 1)
     for i in range(len_X):
         x_len = np.random.randint(length_range[0], length_range[1])
-        x = []
+        '''x = []
         for j in range(x_len):
             x.append(np.random.randint(0, len(candidate_sents)))
+        '''
+        x = None
+        if x_len <= len(candidate_sents):
+            x = np.random.choice(sent_range, size = (x_len), replace = False).tolist()
+        else:
+            x = np.random.choice(sent_range, size = (x_len), replace = True).tolist()
         X.append(x)
     return config['opt_function'].optimize(X, config)
 
@@ -158,12 +168,12 @@ def evaluate(hyp_text, ref_text, hyp_enc, ref_enc):
     param [ref_text]: string of gold standard summary
 
     param [hyp_enc]: 1d numpy array of our summary embedding
-    param [ref_enc]: 1d numpy array of gold standard embedding, 
+    param [ref_enc]: 1d numpy array of gold standard embedding,
                         must be same dimensions as above
     '''
     eval_dict = ev.evaluate_rouge(hyp_text, ref_text)
     eval_dict['cos_sim'] = ev.evaluate_embeddings(hyp_enc, ref_enc)
-    
+
     return eval_dict
 
 
@@ -197,42 +207,53 @@ def summarize_product(sentences, config):
 
 def summarize_dataset(config):
     load_config(config)
-    generated_reviews = []
+    results = {}
     for ix, sentences in config['dataset'].items():
         sents = list(filter(lambda x: len(x) > 40, sentences))
         output = summarize_product(sents, config)
         print('Final Output:', output)
-        generated_reviews.append(output)
-    return generated_reviews
+        results[ix] = output
+    with open(config['save_path'], 'w') as outfile:
+        json.dump(results, outfile)
+
+def summarize_datasets(config):
+    for ix, dataset_path in enumerate(config['dataset_path_list']):
+        config['dataset_path'] = dataset_path
+        config['save_path'] = config['dataset_save_list'][ix]
+        summarize_dataset(config)
+
 
 if __name__ == "__main__":
     from optimization.finetune_bert_genetic_optimizer import GeneticBertOptimizer
 
-
     config = {
+    'save_path' : 'data/electronics_results.json',
     'dataset_path' : 'autotransformer/data/electronics_dataset_1.pkl',
+    'dataset_path_list': [],
+    'dataset_save_list': [],
     'dataset' : None,
 
     'extractive' : False,
     'device' : None,
 
-    'src_vocab_path' : 'autotransformer/models/electronics/src_vocab.pt',
+    'src_vocab_path' : 'models/electronics/src_vocab.pt',
     'src_vocab' : None,
-    'trg_vocab_path' : 'autotransformer/models/electronics/trg_vocab.pt',
-    'autoencoder_path': 'autotransformer/models/electronics/electronics_autoencoder_epoch7_weights.pt',
+    'trg_vocab_path' : 'models/electronics/trg_vocab.pt',
+    'autoencoder_path': 'models/electronics/electronics_autoencoder_epoch7_weights.pt',
     'autoencoder' : None,
     'ae_batchsize': 5000,
 
-    'density_parameter' : .04,
-    'minimum_samples': 4,
-    'min_clusters': 5,
-    'max_acceptable_clusters':30,
-    'min_num_candidates': 100,
+    'density_parameter' : 2,
+    'minimum_samples': 2,
+    'min_clusters': 50,
+    'max_acceptable_clusters': 200,
+    'min_num_candidates': 250,
 
-    'BERT_finetune_path' : 'bert_finetune/models/finetune_electronics_mae1.pt',
-    'BERT_config_path' : 'bert_finetune/models/finetune_electronics_mae1config.json',
+    'BERT_finetune_path' : 'models/electronics/finetune_electronics_mae_mk31.pt',
+    'BERT_config_path' : 'models/electronics/finetune_electronics_mae_mk31config.json',
     'BERT_finetune_model' : None,
     'BERT_batchsize': 25,
+    'length_penalty_order': 1.5,
 
     'opt_function' : GeneticBertOptimizer(),
 
@@ -241,11 +262,13 @@ if __name__ == "__main__":
         #this is the number of optimization estimates used by the algorithm
         'n_elite': 5,
         'length_range': (5,20),
+        'length_penalty_range': (0.4, 1.0),
         'p_replace': .33,
         'p_remove': .33,
         'p_add': .33,
-        'max_iter': 5,
-        'print_iters': 10
+        'prevent_dupe_sents': True,
+        'max_iter': 10,
+        'print_iters': 2
         }
     }
     summarize_dataset(config)

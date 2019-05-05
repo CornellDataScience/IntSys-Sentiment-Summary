@@ -1,5 +1,6 @@
 import numpy as np
 from numpy_key_dict import NumpyKeyDict
+from functools import partial
 
 '''
 -modifies X in-place

@@ -3,6 +3,7 @@ import json
 import random
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 def parse(path):
     g = gzip.open(path, 'rb')
@@ -101,7 +102,7 @@ def make_dataset_mk2(data_path, save_path, up_smooth=1, total_smooth=3):
     n_helpful = len(h_reviews)
 
     assert n_bad < n_helpful
-    n_fake = n_helpful - n_bad
+    n_fake = n_helpful
 
     pos_revs = df[df.overall == 5]
     pos_prod_revs = pos_revs.groupby('asin').filter(lambda x: len(x) > 15).groupby('asin')
@@ -116,7 +117,9 @@ def make_dataset_mk2(data_path, save_path, up_smooth=1, total_smooth=3):
     fake_data = []
     for p in sample_prods:
         sent_list = sentlist_dict[p]
-        fake_review_sents = random.sample(sent_list, random.randint(4, min(20, len(sent_list))))
+        fake_review_sents = random.choices(sent_list, k=random.randint(2, min(24, len(sent_list))))
+        if random.random() < .01:
+            fake_review_sents = random.choices(fake_review_sents, k=len(fake_review_sents))
         review = '. '.join(fake_review_sents) + '.'
         label = max(0, np.random.normal(.05, .02))
         fake_data.append((review, label))
@@ -127,9 +130,13 @@ def make_dataset_mk2(data_path, save_path, up_smooth=1, total_smooth=3):
 
     all_data = np.concatenate([real_unhdata, real_hdata, syn_data])
     df = pd.DataFrame(all_data, columns=['reviewText', 'label'])
-    df.to_csv(save_path, index=False)
+    print(len(df))
+    train, val = train_test_split(df.dropna(), test_size=.2)
+    print(len(train) + len(val))
+    train.to_csv(save_path + '_train.csv', index=False)
+    val.to_csv(save_path + '_val.csv', index=False)
 
 
 data_path = 'data/reviews_electronics_5.gz'
-save_path = 'data/electronics_helpfulness_mk2.csv'
+save_path = 'data/electronics_helpfulness_mk2'
 make_dataset_mk2(data_path, save_path)

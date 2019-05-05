@@ -40,8 +40,9 @@ def optimize(X, fitness_func, n_elite, selection_prob_func, crossover_func, muta
     max_iter = hyper_args["max_iter"]
     print_iters = hyper_args["print_iters"]'''
 
+    fitnesses = fitness_func(X)
     for k in range(0, max_iter):
-        fitnesses = fitness_func(X)
+
         elite_inds = __get_most_elite_inds(fitnesses, n_elite)
         X_prime = []
         for elite_ind in elite_inds:
@@ -57,6 +58,13 @@ def optimize(X, fitness_func, n_elite, selection_prob_func, crossover_func, muta
         X = X_prime
         if k % print_iters == 0:
             print("elite fitness (" + str(k) + "): " + str(fitnesses[elite_inds]))
+
+        fitnesses = fitness_func(X)
+
+    X_fitnesses = [(X[i], fitnesses[i]) for i in range(len(fitnesses))]
+    X_fitnesses = sorted(X_fitnesses, key = lambda x: -x[1])
+    for i in range(len(X_fitnesses)):
+        X[i] = X_fitnesses[i][0]
     return X
 
 
