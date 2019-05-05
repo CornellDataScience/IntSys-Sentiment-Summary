@@ -40,7 +40,7 @@ def load_config(config):
     sys.modules['dataset'] = utils.dataset
 
     #data = utils.dataset.Dataset().get_from_dir(Path(config['data_path']))
-    with open('data.json', 'r') as fp:
+    with open(config['data_path'], 'r') as fp:
         data = json.load(fp)
         config['dataset'] = data
 
@@ -207,19 +207,30 @@ def summarize_product(sentences, config):
 
 def summarize_dataset(config):
     load_config(config)
-    generated_reviews = []
+    results = {}
     for ix, sentences in config['dataset'].items():
         sents = list(filter(lambda x: len(x) > 40, sentences))
         output = summarize_product(sents, config)
         print('Final Output:', output)
-        generated_reviews.append(output)
-    return generated_reviews
+        results[ix] = output
+    with open(config['save_path'], 'w') as outfile:
+        json.dump(results, outfile)
+
+def summarize_datasets(config):
+    for ix, dataset_path in enumerate(config['dataset_path_list']):
+        config['dataset_path'] = dataset_path
+        config['save_path'] = config['dataset_save_list'][ix]
+        summarize_dataset(config)
+
 
 if __name__ == "__main__":
     from optimization.finetune_bert_genetic_optimizer import GeneticBertOptimizer
 
     config = {
+    'save_path' : 'data/electronics_results.json',
     'dataset_path' : 'autotransformer/data/electronics_dataset_1.pkl',
+    'dataset_path_list': [],
+    'dataset_save_list': [],
     'dataset' : None,
 
     'extractive' : False,
@@ -238,11 +249,11 @@ if __name__ == "__main__":
     'max_acceptable_clusters': 200,
     'min_num_candidates': 250,
 
-    'BERT_finetune_path' : 'models/electronics/finetune_electronics_mae1.pt',
-    'BERT_config_path' : 'models/electronics/finetune_electronics_mae1config.json',
+    'BERT_finetune_path' : 'models/electronics/finetune_electronics_mae_mk31.pt',
+    'BERT_config_path' : 'models/electronics/finetune_electronics_mae_mk31config.json',
     'BERT_finetune_model' : None,
     'BERT_batchsize': 25,
-    'length_penalty_order': 2,
+    'length_penalty_order': 1.5,
 
     'opt_function' : GeneticBertOptimizer(),
 
@@ -251,13 +262,13 @@ if __name__ == "__main__":
         #this is the number of optimization estimates used by the algorithm
         'n_elite': 5,
         'length_range': (5,20),
-        'length_penalty_range': (0.3, 1.0),
+        'length_penalty_range': (0.4, 1.0),
         'p_replace': .33,
         'p_remove': .33,
         'p_add': .33,
         'prevent_dupe_sents': True,
         'max_iter': 10,
-        'print_iters': 1
+        'print_iters': 2
         }
     }
     summarize_dataset(config)
