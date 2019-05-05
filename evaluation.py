@@ -97,7 +97,44 @@ def evaluate_rouge(hyp, ref):
 
     return fpr_dict
 
+
+def eval_dicts(results_dict, gold_dict):
+    assert len(results_dict) == len(gold_dict)
+    ret_list = [] #list of dictionaries
+    for x in range(len(results_dict)):
+        ret_list.append(evaluate_rouge(results_dict[x], gold_dict[x]))
+    return ret_list
+
     
+def avg_dicts(rouge_list):
+    ret_list = []
+    for rouge_type in ['rouge-1','rouge-2', 
+                'rouge-3', 'rouge-4', 'rouge-l', 'rouge-w']:
+        rouge_types = []
+        for rouge_dict in rouge_list:
+            rouge_types.append(rouge_dict[rouge_type])
+        ret_list.append(rouge_types)
+
+    return ret_list
+
+def eval_avg_dicts(rouge_list):
+    ret_list = []
+    for type_list in rouge_list:
+        f_sum = 0
+        p_sum = 0
+        r_sum = 0
+        for result_tup in type_list:
+            f_sum += result_tup[0]
+            p_sum += result_tup[1]
+            r_sum += result_tup[2]
+
+        ret_list.append((f_sum / 15, p_sum / 15, r_sum / 15))
+
+    return ret_list #(f, p, r) averages of all rouge types in order
+                    #['rouge-1','rouge-2', 'rouge-3', 'rouge-4', 'rouge-l', 'rouge-w']
+        
+
+
 
 def evaluate_embeddings(hyp_encoding, ref_encoding):
     vec1 = hyp_encoding.reshape(1, -1)
