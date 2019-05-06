@@ -90,13 +90,13 @@ def make_dataset_mk2(data_path, save_path, up_smooth=1, total_smooth=3):
     df['inters'] = df.apply(lambda x: x.helpful[1], axis=1)
     df.loc[:,'downs'] = df.apply(lambda x: x.helpful[1] - x.helpful[0], axis=1)
     df.loc[:,'ups'] = df.apply(lambda x: x.helpful[0], axis=1)
-    inter_over2 = df[df.inters > 2]
+    inter_over2 = df[df.inters > 4]
     inter_over2.loc[:, 'ratio'] = inter_over2.apply(lambda x: (x.ups) / (x.inters), axis=1)
 
     bad_reviews = inter_over2[inter_over2.ratio < .3]
     n_bad = len(bad_reviews)
 
-    inter_over5 = inter_over2[inter_over2.inters > 5]
+    inter_over5 = inter_over2[inter_over2.inters > 8]
     inter_over5.loc[:, 'ratio'] = inter_over2.apply(lambda x: (x.ups + up_smooth) / (x.inters + total_smooth), axis=1)
     h_reviews = inter_over5[inter_over5.ratio > .87]
     n_helpful = len(h_reviews)
@@ -104,14 +104,14 @@ def make_dataset_mk2(data_path, save_path, up_smooth=1, total_smooth=3):
     assert n_bad < n_helpful
     n_fake = n_helpful
 
-    pos_revs = df[df.overall == 5]
+    pos_revs = df[df.overall >= 4]
     pos_prod_revs = pos_revs.groupby('asin').filter(lambda x: len(x) > 15).groupby('asin')
 
     sent_dict = {}
     for ix, group in pos_prod_revs:
         sent_dict[ix] = list(map(lambda x: (x.split('.')),list(group.reviewText.values)))
 
-    sentlist_dict = {ix:[s.strip() for r in revs for s in r if len(s) > 20] for ix, revs in sent_dict.items()}
+    sentlist_dict = {ix:[s.strip() for r in revs for s in r if len(s) > 30] for ix, revs in sent_dict.items()}
 
     sample_prods = random.choices(list(sent_dict.keys()), k=n_fake)
     fake_data = []
@@ -137,6 +137,6 @@ def make_dataset_mk2(data_path, save_path, up_smooth=1, total_smooth=3):
     val.to_csv(save_path + '_val.csv', index=False)
 
 
-data_path = 'data/reviews_electronics_5.gz'
-save_path = 'data/electronics_helpfulness_mk2'
+data_path = 'data/reviews_Books_5.json.gz'
+save_path = 'data/books_helpfulness'
 make_dataset_mk2(data_path, save_path)

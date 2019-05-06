@@ -15,7 +15,7 @@ from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
-from torch.nn import CrossEntropyLoss, MSELoss
+from torch.nn import CrossEntropyLoss, MSELoss, L1Loss
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import matthews_corrcoef, f1_score
 
@@ -36,7 +36,7 @@ def load_data(path):
     df = pd.read_csv(path)
     examples = []
     for ix, row in df.iterrows():
-        examples.append(InputExample(ix, row.reviewText, label=row.helpful))
+        examples.append(InputExample(ix, row.reviewText, label=row.label))
     return examples
 
 def finetune(data_path, output_path, save_name, batch_size, n_epochs, learning_rate, warmup_proportion, gradient_accumulation_steps):
@@ -45,7 +45,7 @@ def finetune(data_path, output_path, save_name, batch_size, n_epochs, learning_r
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     batch_size = batch_size // gradient_accumulation_steps
-    train_examples = load_data('data/sports_helpfulness.csv')
+    train_examples = load_data(data_path)
     num_train_optimization_steps = int(len(train_examples) / batch_size / gradient_accumulation_steps) * n_epochs
 
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=1)
@@ -82,7 +82,7 @@ def finetune(data_path, output_path, save_name, batch_size, n_epochs, learning_r
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
 
     model.train()
-    loss_fct = MSELoss()
+    loss_fct = L1Loss()
     for e in trange(int(n_epochs), desc="Epoch"):
         tr_loss = 0
         nb_tr_examples, nb_tr_steps = 0, 0
@@ -121,12 +121,12 @@ def finetune(data_path, output_path, save_name, batch_size, n_epochs, learning_r
 """MAKE SURE YOU CREATE A FOLDER CALLED MODELS BEFORE FINETUNING"""
 
 output_path = 'models/'
-save_name = 'finetune_sports'
-data_path = 'data/sports_helpfulness.csv'
+save_name = 'finetune_books'
+data_path = 'data/sub_books_train.csv'
 
 batch_size = 2
-n_epochs = 2
-learning_rate = 5e-5
+n_epochs = 3
+learning_rate = 2e-6
 warmup_proportion = .1
 gradient_accumulation_steps = 1
 
