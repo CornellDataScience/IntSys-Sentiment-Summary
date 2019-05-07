@@ -99,9 +99,9 @@ def evaluate_rouge(hyp, ref):
 
 
 def eval_dicts(results_dict, gold_dict):
-    assert len(results_dict) == len(gold_dict)
+    #assert len(results_dict) == len(gold_dict)
     ret_list = [] #list of dictionaries
-    for x in range(len(results_dict)):
+    for x in results_dict.keys():
         ret_list.append(evaluate_rouge(results_dict[x], gold_dict[x]))
     return ret_list
 
